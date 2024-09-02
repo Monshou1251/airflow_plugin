@@ -87,7 +87,7 @@
   }
 
   .button-submit {
-    display: none; /* Hidden by default */
+    display: flex;
     margin-top: 20px;
     text-align: right;
     gap: 10px;
@@ -101,13 +101,9 @@
     </div>
     <div class="mssql-plugin-container">
       <div class="mssql-plugin-form-group">
-        <label for="mssqlDbConnection">Choose a Database Connection:</label>
-        <select id="mssqlDbConnection">
-          <!-- Options will be populated dynamically -->
-        </select>
-        <button id="mssqlFetchData">Fetch Data</button>
+        <p><strong>Selected Project:</strong> {{ project_name }}</p>
+        <p><strong>Selected Connection:</strong> {{ connection }}</p>
       </div>
-      <div id="errorMessage" class="error-message"></div>
       <div class="ag-grid-container">
         <div
           id="myGrid"
@@ -122,8 +118,9 @@
             name="action"
             value="save"
           >
-            Сохранить
+            Save
           </button>
+          <a href="" class="btn btn-secondary btn-no-margin">DAGs</a>
           <a
             href="javascript:history.back()"
             class="btn btn-sm btn-default btn-no-margin"
@@ -132,7 +129,7 @@
             title=""
             data-original-title="Back"
           >
-            <span class="sr-only">Назад</span>
+            <span class="sr-only">Back</span>
             <i class="fa fa-arrow-left"></i>
           </a>
         </div>
@@ -146,7 +143,10 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     // Fetch available connections and populate the dropdown
-    fetch("/mybaseview/fetch_airflow_connections")
+    // fetch("/mybaseview/fetch_airflow_connections")
+    fetch(
+      `/mybaseview/fetch_data?connection=${encodeURIComponent(project_name)}`
+    )
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -185,7 +185,6 @@
         // Clear previous messages or data
         errorMessageDiv.textContent = "";
         gridDiv.innerHTML = ""; // Clear the grid
-        buttonContainer.style.display = "none"; // Hide the buttons initially
 
         // Show a loading indicator
         const loadingIndicator = document.createElement("div");
@@ -302,7 +301,6 @@
               new agGrid.Grid(gridDiv, gridOptions);
 
               // Show the buttons now that the grid has loaded
-              buttonContainer.style.display = "flex";
             } else {
               errorMessageDiv.textContent = "Invalid data format received.";
               console.error("Invalid data format:", data);

@@ -174,12 +174,13 @@
             name="action"
             value="save"
           >
-            Сохранить
+            Save
           </button>
           <a
-            href="{{ url_for('ProjectsView.projects_to_load') }}"
+            href="#"
             class="btn btn-secondary btn-no-margin"
-            >Проекты</a
+            id="tables-list-btn"
+            >Tables List</a
           >
           <a
             href="{{ url_for('ProjectsView.project_list') }}"
@@ -195,5 +196,22 @@
     </div>
   </div>
 </div>
+
+<script>
+  document.getElementById('tables-list-btn').addEventListener('click', function(event) {
+    event.preventDefault(); // Prevent the default action
+
+    // Get selected values
+    const projectName = document.querySelector('[name="project_name"]').value;
+    const connection = document.querySelector('[name="connection"]').value;
+
+    // Construct the URL with query parameters
+    const url = "{{ url_for('ProjectsView.projects_to_load') }}" + 
+                `?project_name=${encodeURIComponent(projectName)}&connection=${encodeURIComponent(connection)}`;
+
+    // Redirect to the constructed URL
+    window.location.href = url;
+  });
+</script>
 
 {% endblock %}

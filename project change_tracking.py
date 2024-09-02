@@ -84,7 +84,7 @@ class MyTask:
 class FilterForm(Form):
     """Форма получения данных об используемых коннектах и базах данных"""
 
-    project_name = StringField('Имя проекта',
+    project_name = StringField('CT Project ID',
                                validators=[InputRequired()],
                                id="conn_id",
 
@@ -94,7 +94,7 @@ class FilterForm(Form):
                                           }
                                )
 
-    connection = SelectField('Подключение',
+    connection = SelectField('Connection ID',
                              choices=get_all_connections(),
                              id="conn_type",
                              render_kw={"class": "form-control",
@@ -102,7 +102,7 @@ class FilterForm(Form):
                                         },
                              )
 
-    load_type = SelectField('Тип подключения',
+    load_type = SelectField('Source Connection ID',
                             choices=['CDC', 'HODS', 'CT'],
                             id="conn_type",
                             name="conn_type1",
@@ -301,7 +301,10 @@ class ProjectsView(AppBuilderBaseView):
     @expose('/projects_to_load', methods=['GET'])
     def projects_to_load(self):
         """Render a new HTML page"""
-        return self.render_template("projects_to_load.html")
+        
+        project_name = request.args.get('project_name')
+        connection = request.args.get('connection')
+        return self.render_template("projects_to_load.html", project_name=project_name, connection=connection)
     
     
 
