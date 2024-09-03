@@ -1,10 +1,12 @@
 import json
+
+import flask
 import pandas as pd
 from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request, jsonify, url_for, redirect, flash
 from flask_appbuilder import expose, BaseView as AppBuilderBaseView
 
-from wtforms import Form, SelectField, RadioField, DateField, StringField
+from wtforms import Form, SelectField, RadioField, DateField, StringField, BooleanField
 from airflow.www.app import csrf
 from wtforms.validators import InputRequired
 from croniter import croniter, CroniterBadCronError, CroniterBadDateError
@@ -55,28 +57,33 @@ def validate_cron(form, field) -> bool:
 
 
 class MyTask:
-    def __init__(self, project_name, connection, project_type, load_type, database_source, database_change_tracking,
-                 start, schedule):
-        self.project_name = project_name
-        self.connection = connection
-        self.project_type = project_type
-        self.load_type = load_type
-        self.database_source = database_source
-        self.database_change_tracking = database_change_tracking
-        self.start = start
-        self.schedule = schedule
+    def __init__(self, source_connection_id, one_c_database, biview_database, biview_project_type,
+                 ct_database, transfer_source_data, target_connection_id, target_database, target_type,
+                 ct_project_name):
+        self.source_connection_id = source_connection_id
+        self.one_c_database = one_c_database
+        self.biview_database = biview_database
+        self.biview_project_type = biview_project_type
+        self.ct_database = ct_database
+        self.transfer_source_data = transfer_source_data
+        self.target_connection_id = target_connection_id
+        self.target_database = target_database
+        self.target_type = target_type
+        self.ct_project_name = ct_project_name
 
     def jsonify_data(self) -> str:
         """Transformation data in json format"""
         result = {
-            'project_name': self.project_name,
-            'connection': self.connection,
-            'project_type': self.project_type,
-            'load_type': self.load_type,
-            'database_source': self.database_source,
-            'database_change_tracking': self.database_change_tracking,
-            'start': str(self.start),
-            'schedule': self.schedule
+            'source_connection_id': self.source_connection_id,
+            'one_c_database': self.one_c_database,
+            'biview_database': self.biview_database,
+            'biview_project_type': self.biview_project_type,
+            'ct_database': self.ct_database,
+            'transfer_source_data': str(self.transfer_source_data),
+            'target_connection_id': self.target_connection_id,
+            'target_database': self.target_database,
+            'target_type': self.target_type,
+            'ct_project_name': self.ct_project_name,
         }
         return json.dumps(result, indent=4)
 
@@ -84,74 +91,114 @@ class MyTask:
 class FilterForm(Form):
     """Форма получения данных об используемых коннектах и базах данных"""
 
-    project_name = StringField('Имя проекта',
-                               validators=[InputRequired()],
-                               id="conn_id",
+    ct_project_name = StringField(
+        'Project name',
+        validators=[InputRequired()],
+        id="conn_id",
 
-                               render_kw={"placeholder": "Введите имя проекта",
-                                          "class": "form-control",
-                                          "type": "text"
-                                          }
-                               )
+        render_kw={"placeholder": "Введите имя проекта",
+                   "class": "form-control",
+                   "type": "text"
+                   }
+    )
 
-    connection = SelectField('Подключение',
-                             choices=get_all_connections(),
-                             id="conn_type",
-                             render_kw={"class": "form-control",
-                                        "data-placeholder": "Select Value",
-                                        },
-                             )
+    source_connection_id = SelectField(
+        'Source Connection ID',
+        choices=get_all_connections(),
+        id="conn_type",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value",
+                   },
+    )
 
-    load_type = SelectField('Тип подключения',
-                            choices=['CDC', 'HODS', 'CT'],
-                            id="conn_type",
-                            name="conn_type1",
-                            render_kw={"class": "form-control",
-                                       "data-placeholder": "Select Value",
-                                       },
-                            )
+    one_c_database = SelectField(
+        '1C Database',
+        choices=get_all_database_mssql(),
+        id="conn_type",
+        name="conn_type2",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value"
+                   }
+    )
 
-    project_type = RadioField('Тип проекта',
-                              validators=[InputRequired()],
-                              choices=[('1', 'Type 1'), ('2', 'Type 2')],
-                              default='1',
-                              name="project_type",
-                              id="project_type",
-                              render_kw={"class": "form-check-input",
-                                         "type": "radio"
-                                         }
-                              )
+    biview_database = SelectField(
+        'BIView Database',
+        choices=get_all_database_mssql(),
+        id="conn_type",
+        name="conn_type2",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value"
+                   }
+    )
 
-    database_source = SelectField('ДБ - источник',
-                                  choices=get_all_database_mssql(),
-                                  id="conn_type",
-                                  name="conn_type2",
-                                  render_kw={"class": "form-control",
-                                             "data-placeholder": "Select Value"
-                                             }
-                                  )
+    biview_project_type = RadioField(
+        'BIView Project Type',
+        validators=[InputRequired()],
+        choices=[('1', 'Type 1'), ('2', 'Type 2')],
+        default='1',
+        name="project_type",
+        id="project_type",
+        render_kw={"class": "form-check-input",
+                   "type": "radio"
+                   }
+    )
 
-    database_change_tracking = SelectField('ДБ - change',
-                                           choices=get_all_database_mssql(),
-                                           id="conn_type",
-                                           name="conn_type3",
-                                           render_kw={"class": "form-control",
-                                                      "data-placeholder": "Select Value"
-                                                      }
-                                           )
+    ct_database = SelectField(
+        'CT Database',
+        choices=get_all_database_mssql(),
+        id="conn_type",
+        name="conn_type2",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value"
+                   }
+    )
 
-    start = DateField('Дата Начала',
-                      validators=[InputRequired()],
-                      render_kw={"class": "form-control-short"}
-                      )
+    transfer_source_data = BooleanField(
+        'Transfer Source Data to Target',
+        false_values=(False, 'No', "Yes")
+    )
 
-    schedule = StringField('Расписание',
-                           validators=[InputRequired(), validate_cron],
-                           default="* * * * *",
-                           render_kw={"class": "form-control-short",
-                                      "data-placeholder": "Select Value"
-                                      }
-                           )
+    target_connection_id = SelectField(
+        'Target Connection ID',
+        choices=get_all_connections(),
+        id="conn_type",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value",
+                   },
+    )
+
+    target_database = SelectField(
+        'Target Database',
+        choices=get_all_database_mssql(),
+        id="conn_type",
+        name="conn_type3",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value"
+                   }
+    )
+
+    target_type = SelectField(
+        'Target Type',
+        choices=['ODS', 'HODS'],
+        id="conn_type",
+        name="conn_type1",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value",
+                   },
+    )
+
+    # start = DateField('Дата Начала',
+    #                   validators=[InputRequired()],
+    #                   render_kw={"class": "form-control-short"}
+    #                   )
+    #
+    # schedule = StringField('Расписание',
+    #                        validators=[InputRequired(), validate_cron],
+    #                        default="* * * * *",
+    #                        render_kw={"class": "form-control-short",
+    #                                   "data-placeholder": "Select Value"
+    #                                   }
+    #                        )
 
 
 class ProjectsView(AppBuilderBaseView):
@@ -184,35 +231,42 @@ class ProjectsView(AppBuilderBaseView):
 
         if request.method == 'POST':
             my_task_output = MyTask(
-                project_name=form.project_name.data,
-                connection=form.connection.data,
-                project_type=form.project_type.data,
-                load_type=form.load_type.data,
-                database_source=form.database_source.data,
-                database_change_tracking=form.database_change_tracking.data,
-                start=form.start.data,
-                schedule=form.schedule.data,
+                source_connection_id=form.source_connection_id.data,
+                one_c_database=form.one_c_database.data,
+                biview_database=form.biview_database.data,
+                biview_project_type=form.biview_project_type.data,
+                ct_database=form.ct_database.data,
+                transfer_source_data=form.transfer_source_data.data,
+                target_connection_id=form.target_connection_id.data,
+                target_database=form.target_database.data,
+                target_type=form.target_type.data,
+                ct_project_name=form.ct_project_name.data
             )
 
             sql_insert_query = f"""
                                 INSERT INTO airflow.atk_ct.ct_projects (
-                                    project_name,
-                                    connection_id,
-                                    project_type,
-                                    load_type,
-                                    db_source,
-                                    db_target,
-                                    start_date,
-                                    schedule)
+                                    ct_project_name,
+                                    source_connection_id,
+                                    one_c_database,
+                                    biview_database,
+                                    biview_project_type,
+                                    ct_database,
+                                    transfer_source_data,
+                                    target_connection_id,
+                                    target_database,
+                                    target_type
+                                    )
                                 VALUES (
-                                    '{my_task_output.project_name}',
-                                    '{my_task_output.connection}',
-                                    {my_task_output.project_type},
-                                    '{my_task_output.load_type}',
-                                    '{my_task_output.database_source}',
-                                    '{my_task_output.database_change_tracking}',
-                                    '{my_task_output.start}',
-                                    '{my_task_output.schedule}'
+                                    '{my_task_output.ct_project_name}',
+                                    '{my_task_output.source_connection_id}',
+                                    '{my_task_output.one_c_database}',
+                                    '{my_task_output.biview_database}',
+                                    {my_task_output.biview_project_type},
+                                    '{my_task_output.ct_database}',
+                                    {my_task_output.transfer_source_data},
+                                    '{my_task_output.target_connection_id}',
+                                    '{my_task_output.target_database}',
+                                    '{my_task_output.target_type}'
                                     );"""
             print(sql_insert_query)
             try:
@@ -233,14 +287,14 @@ class ProjectsView(AppBuilderBaseView):
 
         return self.render_template("add_projects.html", form=form)
 
-    @expose("/edit/<int:project_id>", methods=['GET', 'POST'])
+    @expose("/edit/<int:ct_project_id>", methods=['GET', 'POST'])
     @csrf.exempt
-    def edit_project_data(self, project_id):
+    def edit_project_data(self, ct_project_id):
         """Редактирование данных проекта"""
 
         print("Im in edit_project_data")
-        
-        sql_select_query = f"""SELECT * FROM airflow.atk_ct.ct_projects WHERE project_id = '{project_id}';"""
+
+        sql_select_query = f"""SELECT * FROM airflow.atk_ct.ct_projects WHERE ct_project_id = '{ct_project_id}';"""
 
         with get_connection_postgres().get_conn() as conn:
             with conn.cursor() as cursor:
@@ -249,60 +303,80 @@ class ProjectsView(AppBuilderBaseView):
                 rows = cursor.fetchall()
                 projects_data = [dict(zip(columns, row)) for row in rows][0]
 
-        projects_data['start_date'] = projects_data['start_date'].strftime('%d.%m.%Y')
+        # projects_data['start_date'] = projects_data['start_date'].strftime('%d.%m.%Y')
         print(projects_data)
 
         form_existing = FilterForm(data=projects_data)
 
         if request.method == 'POST':
+
             form_update = FilterForm(request.form)
+
             my_task_output = MyTask(
-                project_name=form_update.project_name.data,
-                connection=form_update.connection.data,
-                project_type=form_update.project_type.data,
-                load_type=form_update.load_type.data,
-                database_source=form_update.database_source.data,
-                database_change_tracking=form_update.database_change_tracking.data,
-                start=form_update.start.data,
-                schedule=form_update.schedule.data
+                source_connection_id=form_update.source_connection_id.data,
+                one_c_database=form_update.one_c_database.data,
+                biview_database=form_update.biview_database.data,
+                biview_project_type=form_update.biview_project_type.data,
+                ct_database=form_update.ct_database.data,
+                transfer_source_data=form_update.transfer_source_data.data,
+                target_connection_id=form_update.target_connection_id.data,
+                target_database=form_update.target_database.data,
+                target_type=form_update.target_type.data,
+                ct_project_name=form_update.ct_project_name.data
             )
 
-            sql_insert_query = f"""
-                                UPDATE airflow.atk_ct.ct_projects cp
-                                SET project_name = '{my_task_output.project_name}',
-                                    connection_id = '{my_task_output.connection}',
-                                    project_type = {my_task_output.project_type},
-                                    load_type = '{my_task_output.load_type}',
-                                    db_source = '{my_task_output.database_source}',
-                                    db_target = '{my_task_output.database_change_tracking}',
-                                    start_date = '{my_task_output.start}',
-                                    schedule = '{my_task_output.schedule}'
-                                WHERE cp.project_id = '{projects_data['project_id']}'    
-                                    ;"""
-            print(sql_insert_query)
+            sql_update_query = f"""
+                                UPDATE airflow.atk_ct.ct_projects
+                                SET ct_project_name = '{my_task_output.ct_project_name}',
+                                    source_connection_id = '{my_task_output.source_connection_id}',
+                                    one_c_database = '{my_task_output.one_c_database}',
+                                    biview_database = '{my_task_output.biview_database}',
+                                    biview_project_type = {my_task_output.biview_project_type},
+                                    transfer_source_data = {my_task_output.transfer_source_data},
+                                    target_connection_id = '{my_task_output.target_connection_id}',
+                                    target_database = '{my_task_output.target_database}',
+                                    target_type = '{my_task_output.target_type}'
+                                WHERE ct_project_id = '{projects_data['ct_project_id']}'
+                                ;"""
+            print(sql_update_query)
             try:
                 with get_connection_postgres().get_conn() as conn:
                     with conn.cursor() as cursor:
-                        cursor.execute(sql_insert_query)
+                        cursor.execute(sql_update_query)
                     conn.commit()
 
                 flash("Проект успешно измененн", category="info")
-                return self.render_template("add_projects.html", form=form_update)
+                return self.render_template("edit_project.html", form=form_update)
 
             except Exception as e:
                 if 'duplicate key' in str(e):
                     flash("Данное имя проекта уже существует! Выберите другое.", category='warning')
                 else:
                     flash(str(e), category='warning')
-                return self.render_template("add_projects.html", form=form_update)
+                return self.render_template("edit_project.html", form=form_update)
 
-        return self.render_template("add_projects.html", form=form_existing)
+        return self.render_template("edit_project.html", form=form_existing)
 
     @expose('/projects_to_load', methods=['GET'])
     def projects_to_load(self):
         """Render a new HTML page"""
         return self.render_template("projects_to_load.html")
-    
+
+    @expose('/delete/<int:ct_project_id>', methods=['GET'])
+    @csrf.exempt
+    def delete_ct_project(self, ct_project_id):
+        """Удаление проекта"""
+        sql_delete_query = """DELETE FROM airflow.atk_ct.ct_projects WHERE ct_project_id = %s"""
+        try:
+            with get_connection_postgres().get_conn() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql_delete_query, (ct_project_id,))
+                conn.commit()
+            flash("Проект успешно удален", category="info")
+        except Exception as e:
+            flash(str(e))
+        return flask.redirect(url_for('ProjectsView.project_list'))
+
 
 v_appbuilder_view = ProjectsView()
 v_appbuilder_package = {

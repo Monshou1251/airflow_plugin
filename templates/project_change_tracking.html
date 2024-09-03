@@ -21,7 +21,7 @@
                 <i class="fa fa-plus"></i>
             </a>
             <a href="/home" class="btn btn-sm btn-default" data-toggle="tooltip" rel="tooltip" title="" data-original-title="Back">
-            <span class="sr-only">Назад</span>
+            <span class="sr-only">Back</span>
             <i class="fa fa-arrow-left"></i>
             </a>
         </div>
@@ -39,9 +39,6 @@
                             {{ label }}
                         </th>
                         {% endfor %}
-                        <th class="action_checkboxes">
-                            
-                        </th>
                     </tr>
                 </thead>
 
@@ -53,14 +50,14 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-xs" style="display: flex;">
-                                <a href="{{ url_for('ProjectsView.edit_project_data', project_id=projects[i]['project_id']) }}" class="btn btn-sm btn-default" data-toggle="tooltip" rel="tooltip"
+                                <a href="{{ url_for('ProjectsView.edit_project_data', ct_project_id=projects[i]['ct_project_id']) }}" class="btn btn-sm btn-default" data-toggle="tooltip" rel="tooltip"
                                    title="Edit project">
                                     <span class="sr-only">Edit</span>
                                     <i class="fa fa-edit"></i>
                                 </a>
                                 <a
-                                        id="btn-delete-/connection/delete/3"
-                                        href="#"
+                                        id=""
+                                        href="{{ url_for('ProjectsView.delete_ct_project', ct_project_id=projects[i]['ct_project_id']) }}"
                                         class="btn btn-sm btn-default confirm"
                                         rel="tooltip"
                                         title="Delete record">
