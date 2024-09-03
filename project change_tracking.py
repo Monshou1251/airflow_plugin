@@ -79,7 +79,7 @@ class MyTask:
             'biview_database': self.biview_database,
             'biview_project_type': self.biview_project_type,
             'ct_database': self.ct_database,
-            'transfer_source_data': str(self.transfer_source_data),
+            'transfer_source_data': self.transfer_source_data,
             'target_connection_id': self.target_connection_id,
             'target_database': self.target_database,
             'target_type': self.target_type,
@@ -88,8 +88,8 @@ class MyTask:
         return json.dumps(result, indent=4)
 
 
-class FilterForm(Form):
-    """Форма получения данных об используемых коннектах и базах данных"""
+class ProjectForm(Form):
+    """Форма внесения данных о новых проектах и изменения существующих проектов"""
 
     ct_project_name = StringField(
         'Project name',
@@ -227,9 +227,10 @@ class ProjectsView(AppBuilderBaseView):
     def project_add_data(self):
         """Добавление проекта в базу данных"""
 
-        form = FilterForm(request.form)
+        form = ProjectForm(request.form)
 
         if request.method == 'POST':
+            print(form)
             my_task_output = MyTask(
                 source_connection_id=form.source_connection_id.data,
                 one_c_database=form.one_c_database.data,
@@ -268,7 +269,7 @@ class ProjectsView(AppBuilderBaseView):
                                     '{my_task_output.target_database}',
                                     '{my_task_output.target_type}'
                                     );"""
-            print(sql_insert_query)
+
             try:
                 with get_connection_postgres().get_conn() as conn:
                     with conn.cursor() as cursor:
@@ -306,11 +307,11 @@ class ProjectsView(AppBuilderBaseView):
         # projects_data['start_date'] = projects_data['start_date'].strftime('%d.%m.%Y')
         print(projects_data)
 
-        form_existing = FilterForm(data=projects_data)
+        form_existing = ProjectForm(data=projects_data)
+
+        form_update = ProjectForm(request.form)
 
         if request.method == 'POST':
-
-            form_update = FilterForm(request.form)
 
             my_task_output = MyTask(
                 source_connection_id=form_update.source_connection_id.data,
