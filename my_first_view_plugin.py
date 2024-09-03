@@ -31,10 +31,38 @@ class MyBaseView(AppBuilderBaseView):
             return jsonify({"status": "success", "connections": connection_ids})
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)})
-
+        
     @expose("/fetch_data")
     def fetch_data(self):
+        project_id = request.args.get('project_id')
+        
+        pg_hook = PostgresHook(postgres_conn_id='airflow_postgres')
+        pg_connection = pg_hook.get_conn()
+        pg_cursor = pg_connection.cursor()
+        pg_cursor.execute("SELECT * FROM atk_ct.ct_tables WHERE project_id=%s;", (project_id, ))
+        pg_results = pg_cursor.fetchall()
+        pg_columns = [desc[0] for desc in pg_cursor.description]
+
+        pg_cursor.close()
+        pg_connection.close()
+
+        # Prepare data for the template
+        projects = [dict(zip(pg_columns, row)) for row in pg_results]
+
+        response_data = {
+            "status": "success",
+            "columns": pg_columns,
+            "results": projects
+        }
+
+        return jsonify(response_data)
+
+    @expose("/update_and_fetch_data")
+    def update_and_fetch_data(self):
         connection_id = request.args.get('connection')
+        project_id = request.args.get('project_id')
+        print(" * " * 20)
+        print("PROJECT_NAME:", project_id)
         if not connection_id:
             return jsonify({"status": "error", "message": "No connection selected"})
 
@@ -58,6 +86,8 @@ class MyBaseView(AppBuilderBaseView):
             mssql_connection.close()
 
             table_names = [row[0] for row in mssql_results]
+            print(" * " * 20)
+            print("table_names:", table_names)
             
             # PostgreSQL Hook to insert data
             pg_hook = PostgresHook(postgres_conn_id='airflow_postgres')
@@ -65,15 +95,19 @@ class MyBaseView(AppBuilderBaseView):
             pg_cursor = pg_connection.cursor()
 
             for table_name in table_names:
-                pg_cursor.execute(
-                    "INSERT INTO atk_ct.ct_tables (table_name, load) VALUES (%s, %s) ON CONFLICT (table_name) DO NOTHING;",
-                    (table_name, True)
-                )
+                try:
+                    pg_cursor.execute(
+                        "INSERT INTO atk_ct.ct_tables (project_id, table_name, load) VALUES (%s, %s, %s);",
+                        (project_id, table_name, True)
+                    )
+                except Exception as e:
+                    print("Exception: ", e)
+                    return jsonify(e)
 
             pg_connection.commit()
 
             # Fetch data from atk_ct table
-            pg_cursor.execute("SELECT * FROM atk_ct.ct_tables;")
+            pg_cursor.execute("SELECT * FROM atk_ct.ct_tables WHERE project_id=%s;", (project_id, ))
             pg_results = pg_cursor.fetchall()
             pg_columns = [desc[0] for desc in pg_cursor.description]
 
