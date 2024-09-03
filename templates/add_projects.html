@@ -114,136 +114,152 @@
       background-color: #f8f9fa;
   }
 
+
 </style>
 
 {% endblock %} {% block content %}
 <div class="container-form">
-  <div class="panel panel-primary">
-    <div class="panel-heading">
-      <h4>Add CT Project</h4>
+    <div class="panel panel-primary">
+        <div class="panel-heading">
+            <h4>Add CT Project</h4>
+        </div>
+        <div class="panel-body">
+            <form id="connection_form" method="POST">
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.ct_project_name.label }}<strong class="text-danger"
+                    > *</strong
+                    ></label
+                    >
+                    <div class="col-sm-10">{{ form.ct_project_name }}</div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.source_connection_id.label }}<strong class="text-danger"
+                    > *</strong
+                    ></label
+                    >
+                    <div class="col-sm-10">{{ form.source_connection_id }}</div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.one_c_database.label }}<strong class="text-danger"
+                    > *</strong
+                    ></label
+                    >
+                    <div class="col-sm-10">{{ form.one_c_database }}</div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.biview_database.label }}<strong class="text-danger"
+                    > *</strong
+                    ></label
+                    >
+                    <div class="col-sm-10">{{ form.biview_database }}</div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.biview_project_type.label }}
+                        <strong class="text-danger"> *</strong>
+                    </label>
+                    <div class="col-sm-10">
+                        <div class="form-check">{{ form.biview_project_type }}</div>
+                    </div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.ct_database.label }}<strong class="text-danger"
+                    > *</strong
+                    ></label
+                    >
+                    <div class="col-sm-10">{{ form.ct_database }}</div>
+                </div>
+
+                <div class="form-group row">
+                    <label class="col-sm-2 col-form-label"
+                    >{{ form.transfer_source_data.label }}<strong class="text-danger"
+                    > *</strong
+                    ></label
+                    >
+                    <div class="col-sm-10">{{ form.transfer_source_data }}</div>
+                </div>
+
+                <div id="targetFields" class="target-fields">
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">{{ form.target_connection_id.label }}<strong class="text-danger"> *</strong></label>
+                        <div class="col-sm-10">{{ form.target_connection_id }}</div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">{{ form.target_database.label }}<strong class="text-danger"> *</strong></label>
+                        <div class="col-sm-10">{{ form.target_database }}</div>
+                    </div>
+
+                    <div class="form-group row">
+                        <label class="col-sm-2 col-form-label">{{ form.target_type.label }}<strong class="text-danger"> *</strong></label>
+                        <div class="col-sm-10">
+                            <div class="form-check">{{ form.target_type }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-submit">
+                    <button
+                            type="submit"
+                            class="btn btn-primary btn-no-margin"
+                            name="action"
+                            value="save"
+                    >
+                        Save
+                    </button>
+                    <a
+                            href="{{ url_for('ProjectsView.projects_to_load') }}"
+                            class="btn btn-secondary btn-no-margin"
+                    >Tables List</a
+                    >
+                    <a
+                            href="#"
+                            class="btn btn-secondary btn-no-margin"
+                    >DAGs</a
+                    >
+                    <a
+                            href="{{ url_for('ProjectsView.project_list') }}"
+                            class="btn btn-sm btn-default btn-no-margin"
+                            data-toggle="tooltip"
+                            rel="tooltip"
+                            title=""
+                            data-original-title="Back"
+                    ><span class="sr-only">Back</span><i class="fa fa-arrow-left"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
     </div>
-    <div class="panel-body">
-      <form id="connection_form" method="POST">
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.ct_project_name.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.ct_project_name }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.source_connection_id.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.source_connection_id }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.one_c_database.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.one_c_database }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.biview_database.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.biview_database }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.biview_project_type.label }}
-            <strong class="text-danger"> *</strong>
-          </label>
-          <div class="col-sm-10">
-            <div class="form-check">{{ form.biview_project_type }}</div>
-          </div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.ct_database.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.ct_database }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.transfer_source_data.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.transfer_source_data }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.target_connection_id.label }}<strong class="text-danger"
-              > *</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.target_connection_id }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.target_database.label }}<strong
-              class="text-danger"
-              >*</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.target_database }}</div>
-        </div>
-
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.target_type.label }}
-            <strong class="text-danger">*</strong>
-          </label>
-          <div class="col-sm-10">
-            <div class="form-check">{{ form.target_type }}</div>
-          </div>
-        </div>
-
-        <div class="button-submit">
-          <button
-            type="submit"
-            class="btn btn-primary btn-no-margin"
-            name="action"
-            value="save"
-          >
-            Save
-          </button>
-          <a
-            href="{{ url_for('ProjectsView.projects_to_load') }}"
-            class="btn btn-secondary btn-no-margin"
-            >Projects</a
-          >
-          <a
-            href="{{ url_for('ProjectsView.project_list') }}"
-            class="btn btn-sm btn-default btn-no-margin"
-            data-toggle="tooltip"
-            rel="tooltip"
-            title=""
-            data-original-title="Back"
-            ><span class="sr-only">Back</span><i class="fa fa-arrow-left"></i>
-          </a>
-        </div>
-      </form>
-    </div>
-  </div>
 </div>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const transferSourceDataCheckbox = document.querySelector('#{{ form.transfer_source_data.id }}');
+        const targetFields = document.getElementById('targetFields');
+
+        function toggleTargetFields() {
+            if (transferSourceDataCheckbox.checked) {
+                targetFields.style.display = 'block';
+            } else {
+                targetFields.style.display = 'none';
+            }
+        }
+
+        toggleTargetFields();
+
+        transferSourceDataCheckbox.addEventListener('change', toggleTargetFields);
+    });
+</script>
 
 {% endblock %}

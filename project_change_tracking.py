@@ -34,7 +34,7 @@ def get_all_database_mssql():
     """Получение connections из базы данных mssql"""
     mssql_hook = MsSqlHook(mssql_conn_id='mssql_af_net')
     sql = "SELECT name, database_id FROM sys.databases;"
-    databases = [i[0] for i in mssql_hook.get_records(sql)]
+    databases = [" "] + [i[0] for i in mssql_hook.get_records(sql)]
     return databases
 
 
@@ -42,7 +42,7 @@ def get_all_connections():
     """Получаем все Connections из Apache Airflow"""
     session = settings.Session()
     connections = session.query(Connection).all()
-    connections_list = [i.conn_id for i in connections]
+    connections_list = [" "] + [i.conn_id for i in connections]
     return connections_list
 
 
@@ -178,7 +178,8 @@ class ProjectForm(Form):
 
     target_type = SelectField(
         'Target Type',
-        choices=['ODS', 'HODS'],
+        default=' ',
+        choices=[' ', 'ODS', 'HODS'],
         id="conn_type5",
         name="conn_type5",
         render_kw={"class": "form-control",
@@ -207,26 +208,47 @@ class ProjectsView(AppBuilderBaseView):
     @expose('/', methods=['GET'])
     def project_list(self):
         """View list of projects"""
-        sql_query = "SELECT * FROM airflow.atk_ct.ct_projects"
+        sql_query = """
+                        SELECT
+                            ct_project_id,
+                            ct_project_name,
+                            source_connection_id,
+                            one_c_database,
+                            biview_database,
+                            biview_project_type,
+                            ct_database,
+                            transfer_source_data,
+                            target_connection_id,
+                            target_database,
+                            target_type 
+                        FROM airflow.atk_ct.ct_projects
+                        """
         with get_connection_postgres().get_conn() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(sql_query)
+
                 try:
-                    columns = [col[0] for col in cursor.description]
+                    # columns = [col[0] for col in cursor.description]
+                    columns = ['CT Project ID', 'Project name', 'Source Connection ID', '1C Database', 'BIView Database',
+                               'BIView Project Type', 'CT Database', 'Transfer Source Data', 'Target Connection ID',
+                               'Target Database', 'Target Type']
                     rows = cursor.fetchall()
                     raw_projects = [dict(zip(columns, row)) for row in rows]
+
                     projects = []
                     for dictionary in raw_projects:
-                        if dictionary['transfer_source_data'] is False:
-                            dictionary['transfer_source_data'] = 'No'
+                        if dictionary['Transfer Source Data'] is False:
+                            dictionary['Transfer Source Data'] = 'No'
                             projects.append(dictionary)
                         else:
-                            dictionary['transfer_source_data'] = 'Yes'
+                            dictionary['Transfer Source Data'] = 'Yes'
                             projects.append(dictionary)
-                    count_projects = len(projects)
-                    print(projects)
+
+                    count_projects = len(raw_projects)
+
                 except Exception as e:
                     flash(str(e), category="error")
+
         return self.render_template("project_change_tracking.html", projects=projects, count=count_projects)
 
     @expose("/add", methods=['GET', 'POST'])
@@ -287,7 +309,6 @@ class ProjectsView(AppBuilderBaseView):
 
                 flash("Проект успешно сохраненн", category="info")
                 return self.render_template("add_projects.html", form=form)
-
             except Exception as e:
                 if 'duplicate key' in str(e):
                     flash("Данное имя проекта уже существует! Выберите другое.", category='warning')

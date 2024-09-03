@@ -11,7 +11,7 @@
         </script>
 <div class="panel panel-primary ">
     <div class="panel-heading">
-      <h4 class="panel-title">Список проектов</h4>
+      <h4 class="panel-title">CT Project List</h4>
     </div>
     <div class="panel-body">
         <div class="well well-sm">
@@ -27,7 +27,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-bordered table-hover">
-                <caption>Список существующих проектов</caption>
+                <caption>CT existing project list</caption>
                 <thead>
                     <tr>
                         <th class="action_checkboxes">
@@ -35,9 +35,11 @@
                         </th>
                         <th></th>
                         {% for label in projects[0] %}
+                        {% if label != 'CT Project ID' %}
                         <th>
                             {{ label }}
                         </th>
+                        {% endif %}
                         {% endfor %}
                     </tr>
                 </thead>
@@ -50,14 +52,14 @@
                         </td>
                         <td>
                             <div class="btn-group btn-group-xs" style="display: flex;">
-                                <a href="{{ url_for('ProjectsView.edit_project_data', ct_project_id=projects[i]['ct_project_id']) }}" class="btn btn-sm btn-default" data-toggle="tooltip" rel="tooltip"
+                                <a href="{{ url_for('ProjectsView.edit_project_data', ct_project_id=projects[i]['CT Project ID']) }}" class="btn btn-sm btn-default" data-toggle="tooltip" rel="tooltip"
                                    title="Edit project">
                                     <span class="sr-only">Edit</span>
                                     <i class="fa fa-edit"></i>
                                 </a>
                                 <a
                                         id=""
-                                        href="{{ url_for('ProjectsView.delete_ct_project', ct_project_id=projects[i]['ct_project_id']) }}"
+                                        href="{{ url_for('ProjectsView.delete_ct_project', ct_project_id=projects[i]['CT Project ID']) }}"
                                         class="btn btn-sm btn-default confirm"
                                         rel="tooltip"
                                         title="Delete record">
@@ -74,7 +76,9 @@
                             </div>
                         </td>
                         {% for key, value in projects[i].items() %}
+                        {% if key != 'CT Project ID' %}
                         <td>{{ value }}</td>
+                        {% endif %}
                         {% endfor %}
                     </tr>
                     {% endfor %}
