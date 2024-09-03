@@ -114,8 +114,8 @@ class ProjectForm(Form):
     one_c_database = SelectField(
         '1C Database',
         choices=get_all_database_mssql(),
-        id="conn_type",
-        name="conn_type2",
+        id="conn_type1",
+        name="conn_type1",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value"
                    }
@@ -124,7 +124,7 @@ class ProjectForm(Form):
     biview_database = SelectField(
         'BIView Database',
         choices=get_all_database_mssql(),
-        id="conn_type",
+        id="conn_type2",
         name="conn_type2",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value"
@@ -146,16 +146,15 @@ class ProjectForm(Form):
     ct_database = SelectField(
         'CT Database',
         choices=get_all_database_mssql(),
-        id="conn_type",
-        name="conn_type2",
+        id="conn_type3",
+        name="conn_type3",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value"
                    }
     )
 
     transfer_source_data = BooleanField(
-        'Transfer Source Data to Target',
-        false_values=(False, 'No', "Yes")
+        'Transfer Source Data to Target'
     )
 
     target_connection_id = SelectField(
@@ -170,8 +169,8 @@ class ProjectForm(Form):
     target_database = SelectField(
         'Target Database',
         choices=get_all_database_mssql(),
-        id="conn_type",
-        name="conn_type3",
+        id="conn_type4",
+        name="conn_type4",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value"
                    }
@@ -180,8 +179,8 @@ class ProjectForm(Form):
     target_type = SelectField(
         'Target Type',
         choices=['ODS', 'HODS'],
-        id="conn_type",
-        name="conn_type1",
+        id="conn_type5",
+        name="conn_type5",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
                    },
@@ -215,7 +214,15 @@ class ProjectsView(AppBuilderBaseView):
                 try:
                     columns = [col[0] for col in cursor.description]
                     rows = cursor.fetchall()
-                    projects = [dict(zip(columns, row)) for row in rows]
+                    raw_projects = [dict(zip(columns, row)) for row in rows]
+                    projects = []
+                    for dictionary in raw_projects:
+                        if dictionary['transfer_source_data'] is False:
+                            dictionary['transfer_source_data'] = 'No'
+                            projects.append(dictionary)
+                        else:
+                            dictionary['transfer_source_data'] = 'Yes'
+                            projects.append(dictionary)
                     count_projects = len(projects)
                     print(projects)
                 except Exception as e:
@@ -227,10 +234,12 @@ class ProjectsView(AppBuilderBaseView):
     def project_add_data(self):
         """Добавление проекта в базу данных"""
 
-        form = ProjectForm(request.form)
+        form = ProjectForm()
 
         if request.method == 'POST':
-            print(form)
+
+            form = ProjectForm(request.form)
+
             my_task_output = MyTask(
                 source_connection_id=form.source_connection_id.data,
                 one_c_database=form.one_c_database.data,
