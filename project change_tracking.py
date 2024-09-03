@@ -298,6 +298,22 @@ class ProjectsView(AppBuilderBaseView):
 
         return self.render_template("add_projects.html", form=form_existing)
 
+    @expose('/delete/<int:project_id>', methods=['POST'])
+    @csrf.exempt
+    def delete_ct_project(self, project_id):
+        """Удаление проекта"""
+        sql_delete_query = """DELETE FROM airflow.atk_ct.ct_projects WHERE project_id = %s"""
+        try:
+            with get_connection_postgres().get_conn() as conn:
+                with conn.cursor() as cursor:
+                    cursor.execute(sql_delete_query, (project_id,))
+                conn.commit()
+            return jsonify(success=True, message="Проект успешно удален") 
+        except Exception as e:
+            return jsonify(success=False, message=f"Ошибка при удалении проекта: {str(e)}")
+
+
+    
     @expose('/projects_to_load', methods=['GET'])
     def projects_to_load(self):
         """Render a new HTML page"""

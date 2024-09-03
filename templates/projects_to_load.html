@@ -139,14 +139,17 @@
 </div>
 
 <script>
+  // Ensure the connection variable is passed correctly from Jinja2
+  const connection = "{{ connection }}";
   const dataToSend = [];
 
   document.addEventListener("DOMContentLoaded", function () {
-    // Fetch available connections and populate the dropdown
-    // fetch("/mybaseview/fetch_airflow_connections")
-    fetch(
-      `/mybaseview/fetch_data?connection=${encodeURIComponent(project_name)}`
-    )
+    const gridDiv = document.querySelector("#myGrid");
+    const errorMessageDiv = document.createElement("div");
+    gridDiv.parentNode.insertBefore(errorMessageDiv, gridDiv);
+
+    // Fetch data based on the connection
+    fetch(`/mybaseview/fetch_data?connection=${encodeURIComponent(connection)}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(
@@ -156,172 +159,100 @@
         return response.json();
       })
       .then((data) => {
-        const selectElement = document.getElementById("mssqlDbConnection");
-        selectElement.innerHTML = "";
-        data.connections.forEach((connId) => {
-          const option = document.createElement("option");
-          option.value = connId;
-          option.text = connId;
-          selectElement.appendChild(option);
-        });
-      })
-      .catch((error) => {
-        console.error("Error fetching connections:", error);
-        const errorMessageDiv = document.getElementById("errorMessage");
-        errorMessageDiv.textContent =
-          "Error fetching connections: " + error.message;
-      });
+        if (data.status === "error") {
+          errorMessageDiv.textContent = data.message || "Failed to fetch data";
+          return;
+        }
 
-    // Add click event listener to the button
-    document
-      .getElementById("mssqlFetchData")
-      .addEventListener("click", function () {
-        const selectedConnection =
-          document.getElementById("mssqlDbConnection").value;
-        const errorMessageDiv = document.getElementById("errorMessage");
-        const gridDiv = document.getElementById("myGrid");
-        const buttonContainer = document.querySelector(".button-submit");
+        if (Array.isArray(data.columns) && Array.isArray(data.results)) {
+          const columnDefs = data.columns.map((col) => ({
+            headerName: col.toUpperCase(),
+            field: col,
+            flex: 1,
+            editable: col === "load", // Make only the 'load' column editable
+            cellRenderer: col === "load" ? "agCheckboxCellRenderer" : undefined, // Checkbox renderer for 'load' column
+          }));
 
-        // Clear previous messages or data
-        errorMessageDiv.textContent = "";
-        gridDiv.innerHTML = ""; // Clear the grid
+          const rowData = data.results;
 
-        // Show a loading indicator
-        const loadingIndicator = document.createElement("div");
-        loadingIndicator.textContent = "Loading...";
-        gridDiv.appendChild(loadingIndicator);
+          const gridOptions = {
+            columnDefs: columnDefs,
+            rowData: rowData,
+            pagination: true,
+            paginationPageSize: 20,
+            defaultColDef: {
+              sortable: true,
+              filter: true,
+              resizable: true,
+            },
+            onCellValueChanged: (event) => {
+              const field = event.colDef.field;
+              if (field === "load") {
+                const originalValue = event.oldValue;
+                const newValue = event.newValue;
 
-        fetch(
-          `/mybaseview/fetch_data?connection=${encodeURIComponent(
-            selectedConnection
-          )}`
-        )
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(
-                `Network response was not ok: ${response.statusText}`
-              );
-            }
-            return response.json();
-          })
-          .then((data) => {
-            // Remove loading indicator
-            loadingIndicator.remove();
+                if (originalValue !== newValue) {
+                  const existingEntryIndex = dataToSend.findIndex(
+                    (item) => item.table_name === event.data.table_name
+                  );
 
-            if (data.status === "error") {
-              // Display error message
-              errorMessageDiv.textContent =
-                data.message || "Failed to fetch data";
-              return;
-            }
+                  if (existingEntryIndex !== -1) {
+                    const existingChanges =
+                      dataToSend[existingEntryIndex].changes || [];
+                    const changeIndex = existingChanges.findIndex(
+                      (change) => change.field === field
+                    );
 
-            if (Array.isArray(data.columns) && Array.isArray(data.results)) {
-              const columnDefs = data.columns.map((col) => ({
-                headerName: col.toUpperCase(),
-                field: col,
-                flex: 1,
-                editable: col === "load", // Make only the 'load' column editable
-                cellRenderer:
-                  col === "load" ? "agCheckboxCellRenderer" : undefined, // Checkbox renderer for 'load' column
-              }));
-
-              const rowData = data.results;
-
-              const gridOptions = {
-                columnDefs: columnDefs,
-                rowData: rowData,
-                pagination: true,
-                paginationPageSize: 20,
-                defaultColDef: {
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                },
-                onCellValueChanged: (event) => {
-                  const field = event.colDef.field;
-                  if (field === "load") {
-                    const originalValue = event.oldValue;
-                    const newValue = event.newValue;
-
-                    if (originalValue !== newValue) {
-                      const existingEntryIndex = dataToSend.findIndex(
-                        (item) => item.table_name === event.data.table_name
-                      );
-
-                      if (existingEntryIndex !== -1) {
-                        const existingChanges =
-                          dataToSend[existingEntryIndex].changes || [];
-                        const changeIndex = existingChanges.findIndex(
-                          (change) => change.field === field
-                        );
-
-                        if (changeIndex !== -1) {
-                          // Check if reverted to original value
-                          if (
-                            existingChanges[changeIndex].oldValue === newValue
-                          ) {
-                            // Remove this change if reverted to original
-                            existingChanges.splice(changeIndex, 1);
-                            if (existingChanges.length === 0) {
-                              dataToSend.splice(existingEntryIndex, 1);
-                            }
-                          } else {
-                            // Update the stored change
-                            existingChanges[changeIndex].newValue = newValue;
-                          }
-                        } else {
-                          // Add new change entry
-                          existingChanges.push({
-                            field: field,
-                            oldValue: originalValue,
-                            newValue: newValue,
-                          });
-                          dataToSend[existingEntryIndex].changes =
-                            existingChanges;
+                    if (changeIndex !== -1) {
+                      if (existingChanges[changeIndex].oldValue === newValue) {
+                        existingChanges.splice(changeIndex, 1);
+                        if (existingChanges.length === 0) {
+                          dataToSend.splice(existingEntryIndex, 1);
                         }
                       } else {
-                        // Add new entry
-                        dataToSend.push({
-                          table_name: event.data.table_name,
-                          changes: [
-                            {
-                              field: field,
-                              oldValue: originalValue,
-                              newValue: newValue,
-                            },
-                          ],
-                        });
+                        existingChanges[changeIndex].newValue = newValue;
                       }
+                    } else {
+                      existingChanges.push({
+                        field: field,
+                        oldValue: originalValue,
+                        newValue: newValue,
+                      });
+                      dataToSend[existingEntryIndex].changes = existingChanges;
                     }
+                  } else {
+                    dataToSend.push({
+                      table_name: event.data.table_name,
+                      changes: [
+                        {
+                          field: field,
+                          oldValue: originalValue,
+                          newValue: newValue,
+                        },
+                      ],
+                    });
                   }
-                },
-              };
+                }
+              }
+            },
+          };
 
-              // Initialize the grid
-              new agGrid.Grid(gridDiv, gridOptions);
-
-              // Show the buttons now that the grid has loaded
-            } else {
-              errorMessageDiv.textContent = "Invalid data format received.";
-              console.error("Invalid data format:", data);
-            }
-          })
-          .catch((error) => {
-            // Remove loading indicator
-            loadingIndicator.remove();
-
-            errorMessageDiv.textContent =
-              "Error fetching data: " + error.message;
-            console.error("Error fetching data:", error);
-          });
+          // Initialize the grid
+          new agGrid.Grid(gridDiv, gridOptions);
+        } else {
+          errorMessageDiv.textContent = "Invalid data format received.";
+          console.error("Invalid data format:", data);
+        }
+      })
+      .catch((error) => {
+        errorMessageDiv.textContent = "Error fetching data: " + error.message;
+        console.error("Error fetching data:", error);
       });
 
-    // Function to send the changes to the server when the button is clicked
+    // Handle the save button click
     document
       .getElementById("button-send-datatoload")
       .addEventListener("click", function () {
-        console.log("Data to send:");
-        console.log(dataToSend);
         fetch("/mybaseview/update_data_is_load", {
           method: "POST",
           headers: {
@@ -333,8 +264,7 @@
           .then((data) => {
             if (data.status === "success") {
               alert("Data updated successfully!");
-              // Clear the dataToSend array since the changes are now saved
-              dataToSend.length = 0;
+              dataToSend.length = 0; // Clear the dataToSend array after saving
             } else {
               alert("Failed to update data: " + data.message);
             }
