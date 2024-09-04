@@ -27,7 +27,7 @@
         </div>
         <div class="table-responsive">
             <table class="table table-bordered table-hover">
-                <caption>CT existing project list</caption>
+                <caption>Existing CT Project list</caption>
                 <thead>
                     <tr>
                         <th class="action_checkboxes">
@@ -35,17 +35,15 @@
                         </th>
                         <th></th>
                         {% for label in projects[0] %}
-                        {% if label != 'CT Project ID' %}
                         <th>
                             {{ label }}
                         </th>
-                        {% endif %}
                         {% endfor %}
                     </tr>
                 </thead>
 
                 <tbody>
-                    {% for i in range(count) %}
+                    {% for i in range(count_projects) %}
                     <tr>
                         <td>
                             <input id="3" class="action_check" name="rowid" value="3" type="checkbox">
@@ -67,7 +65,7 @@
                                     <i class="fa fa-trash"></i>
                                 </a>
                                 <script nonce="">
-                                    document.getElementById("btn-delete-/connection/delete/3")
+                                    document.getElementById("btn-delete-{{ url_for('ProjectsView.delete_ct_project', ct_project_id=projects[i]['CT Project ID']) }}")
                                         .addEventListener("click", function () {
                                             const adminAction = new AdminActions();
                                             return adminAction.execute_single_delete('/connection/delete/3','Are you sure you want to delete this item?');
@@ -76,9 +74,7 @@
                             </div>
                         </td>
                         {% for key, value in projects[i].items() %}
-                        {% if key != 'CT Project ID' %}
                         <td>{{ value }}</td>
-                        {% endif %}
                         {% endfor %}
                     </tr>
                     {% endfor %}

@@ -114,13 +114,14 @@
       background-color: #f8f9fa;
   }
 
+
 </style>
 
 {% endblock %} {% block content %}
 <div class="container-form">
     <div class="panel panel-primary">
         <div class="panel-heading">
-            <h4>Edit project</h4>
+            <h4>Add DAGS for CT Project</h4>
         </div>
         <div class="panel-body">
             <form id="connection_form" method="POST">
@@ -163,7 +164,7 @@
                 <div class="form-group row">
                     <label class="col-sm-2 col-form-label"
                     >{{ form.biview_project_type.label }}
-                        <br><strong class="text-danger">*</strong>
+                        <strong class="text-danger"> *</strong>
                     </label>
                     <div class="col-sm-10">
                         <div class="form-check">{{ form.biview_project_type }}</div>
@@ -190,14 +191,12 @@
 
                 <div id="targetFields" class="target-fields">
                     <div class="form-group row">
-                        <label class="col-sm-2 col-form-label">{{ form.target_connection_id.label }}<strong
-                                class="text-danger"> *</strong></label>
+                        <label class="col-sm-2 col-form-label">{{ form.target_connection_id.label }}<strong class="text-danger"> *</strong></label>
                         <div class="col-sm-10">{{ form.target_connection_id }}</div>
                     </div>
 
                     <div class="form-group row">
-                        <label class="col-sm-2 col-form-label">{{ form.target_database.label }}<strong
-                                class="text-danger"> *</strong></label>
+                        <label class="col-sm-2 col-form-label">{{ form.target_database.label }}<strong class="text-danger"> *</strong></label>
                         <div class="col-sm-10">{{ form.target_database }}</div>
                     </div>
 
@@ -219,16 +218,6 @@
                         Save
                     </button>
                     <a
-                            href="{{ url_for('ProjectsView.projects_to_load') }}"
-                            class="btn btn-secondary btn-no-margin"
-                    >Tables List</a
-                    >
-                    <a
-                            href="#"
-                            class="btn btn-secondary btn-no-margin"
-                    >DAGs</a
-                    >
-                    <a
                             href="{{ url_for('ProjectsView.project_list') }}"
                             class="btn btn-sm btn-default btn-no-margin"
                             data-toggle="tooltip"
@@ -242,6 +231,7 @@
         </div>
     </div>
 </div>
+
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -260,7 +250,6 @@
 
         transferSourceDataCheckbox.addEventListener('change', toggleTargetFields);
     });
-
 </script>
 
 {% endblock %}
