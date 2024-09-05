@@ -1,176 +1,120 @@
-{% extends base_template %} {% block content %}
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/bootstrap-table@1.20.2/dist/bootstrap-table.min.css"
-/>
-<script src="https://unpkg.com/bootstrap-table@1.20.2/dist/bootstrap-table.min.js"></script>
+{% extends base_template %}
+
+{% block content %}
+
 
 <div class="container">
-  <div class="row">
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="/static/dist/flash.39f43f5a4fffad4cd720.css"
-    />
-    <script>
-      function toggleErrorMessage() {
-        $(this).toggleClass("expanded-error");
-      }
-    </script>
-    <div class="panel panel-primary">
-      <div class="panel-heading">
-        <h4 class="panel-title">Список проектов</h4>
-      </div>
-      <div class="panel-body">
-        <div class="well well-sm">
-          <a
-            href="{{ url_for('ProjectsView.project_add_data') }}"
-            class="btn btn-sm btn-primary"
-            data-toggle="tooltip"
-            rel="tooltip"
-            title="Add a new project"
-          >
-            <span class="sr-only">Add</span>
-            <i class="fa fa-plus"></i>
-          </a>
-          <a
-            href="/home"
-            class="btn btn-sm btn-default"
-            data-toggle="tooltip"
-            rel="tooltip"
-            title=""
-            data-original-title="Back"
-          >
-            <span class="sr-only">Назад</span>
-            <i class="fa fa-arrow-left"></i>
-          </a>
-        </div>
+    <div class="row">
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/ag-grid-community/styles/ag-grid.css">
+        <link rel="stylesheet" type="text/css" href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css">
 
-        <div class="table-responsive">
-          <table
-            id="projectsTable"
-            class="table table-bordered table-hover"
-            data-toggle="table"
-            data-pagination="true"
-            data-search="true"
-            data-page-list="[all]"
-            data-search-align="left"
-          >
-            <caption>
-              Список существующих проектов
-            </caption>
-            <thead>
-              <tr>
-                <th class="action_checkboxes">
-                    <input id="check_all" class="action_check_all" name="check_all" type="checkbox">
-                  </th>
-                  <th></th>
-                {% for label in projects[0] %}
-                <th data-sortable="true">{{ label }}</th>
-                {% endfor %}
-                <th class="action_checkboxes">
-                            
-                </th>
-              </tr>
-            </thead>
+        <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
 
-            <tbody>
-              {% for i in range(count) %}
-              <tr>
-                <td>
-                  <input
-                    id="{{ projects[i]['project_id'] }}"
-                    class="action_check"
-                    name="rowid"
-                    value="{{ projects[i]['project_id'] }}"
-                    type="checkbox"
-                  />
-                </td>
-                <td>
-                  <div class="btn-group btn-group-xs" style="display: flex">
-                    <a
-                      href="{{ url_for('ProjectsView.edit_project_data', project_id=projects[i]['project_id']) }}"
-                      class="btn btn-sm btn-default"
-                      data-toggle="tooltip"
-                      rel="tooltip"
-                      title="Edit project"
-                    >
-                      <span class="sr-only">Edit</span>
-                      <i class="fa fa-edit"></i>
+        <style>
+          /* Override AG Grid border color */
+          .ag-theme-alpine {
+              --ag-border-color: #f0f0f0;
+          }
+
+          /* Center the checkboxes and actions vertically */
+          .custom-cell {
+              display: flex;
+              align-items: center;
+              justify-content: center;
+          }
+        </style>
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <h4 class="panel-title">CT Project List</h4>
+            </div>
+            <div class="panel-body">
+                <div class="well well-sm">
+                    <a href="{{ url_for('ProjectsView.project_add_data') }}" class="btn btn-sm btn-primary" title="Add a new project">
+                        <i class="fa fa-plus"></i>
                     </a>
-                    <a id="btn-delete-{{ projects[i]['project_id'] }}"
-                    href="javascript:void(0);"
-                    class="btn btn-sm btn-default confirm"
-                    rel="tooltip"
-                    title="Delete record">
-                    <i class="fa fa-trash"></i>
+                    <a href="/home" class="btn btn-sm btn-default" title="Back">
+                        <i class="fa fa-arrow-left"></i>
                     </a>
-                    <script>
-                        document.getElementById("btn-delete-{{ projects[i]['project_id'] }}")
-                            .addEventListener("click", function (event) {
-                                event.preventDefault(); // Prevent the default behavior of the link
-                                
-                                if (confirm('Are you sure you want to delete this item?')) {
-                                    const projectId = "{{ projects[i]['project_id'] }}";
-                                    const url = `/ProjectsView/delete/${projectId}`;
-                                    
-                                    fetch(url, {
-                                        method: "POST",  // Use POST to match the endpoint method
-                                        headers: {
-                                            "Content-Type": "application/json"
-                                        },
-                                        credentials: 'same-origin'  // Include credentials like cookies
-                                    })
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        if (data.success) {
-                                            alert(data.message);  // Show success message
-                                            
-                                            // Remove the corresponding row from the table
-                                            const row = document.getElementById(`row-${projectId}`);
-                                            if (row) {
-                                                row.remove();
-                                            }
-                                        } else {
-                                            alert("Failed to delete the project: " + data.message);
-                                        }
-                                    })
-                                    .catch(error => console.error('Error:', error));
-                                }
-                            });
-                        </script>
-                  </div>
-                </td>
-                {% for key, value in projects[i].items() %}
-                <td>{{ value }}</td>
-                {% endfor %}
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+                </div>
+
+                <div id="ag-grid-container" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+
+                <script>
+                    // Sample column definitions for the AG Grid
+                    var columnDefs = [
+                      {
+                        headerCheckboxSelection: true, // Adds checkbox to the header
+                        checkboxSelection: true, // Adds checkbox to each row
+                        headerName: "", // No header name
+                        field: "select", // Field name (optional)
+                        width: 50, // Adjust width as needed
+                        suppressHeaderMenuButton: true, // Disable filtering menu
+                        resizable: false,
+                      },
+                      {
+                        headerName: "",
+                        field: "actions",
+                        cellRenderer: actionCellRenderer,
+                        suppressHeaderMenuButton: true, // Disable filtering menu
+                        width: 120,
+                        resizable: false,
+                        cellClass: 'custom-cell'
+                      },
+                      {% for label in projects[0] %}
+                        {
+                          headerName: "{{ label }}",
+                          field: "{{ label|lower|replace(' ', '_') }}",
+                          sortable: true,
+                          filter: true
+                        },
+                      {% endfor %}
+                    ];
+
+                    // Custom renderer for action buttons
+                    function actionCellRenderer(params) {
+                        const projectId = params.data.ct_project_id;
+                        return `
+                            <div id="action-button" class="btn-group btn-group-xs custom-cell">
+                                <a href="/projectsview/edit/${projectId}" class="btn btn-default" title="Edit">
+                                    <i class="fa fa-edit"></i>
+                                </a>
+                                <a href="/delete/${projectId}" class="btn btn-default" title="Delete">
+                                    <i class="fa fa-trash"></i>
+                                </a>
+                            </div>
+                        `;
+                    }
+
+                    // Row data for the grid (replace with dynamic data)
+                    var rowData = [
+                        {% for i in range(count_projects) %}
+                            {
+                                {% for key, value in projects[i].items() %}
+                                    "{{ key|lower|replace(' ', '_') }}": "{{ value }}",
+                                {% endfor %}
+                            },
+                        {% endfor %}
+                    ];
+
+                    // Create the grid with options
+                    var gridOptions = {
+                        columnDefs: columnDefs,
+                        rowData: rowData,
+                        rowSelection: 'multiple',
+                        onGridReady: function(params) {
+                            params.api.sizeColumnsToFit();
+                        }
+                    };
+
+                    // Initialize the grid
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var eGridDiv = document.querySelector('#ag-grid-container');
+                        new agGrid.Grid(eGridDiv, gridOptions);
+                    });
+                </script>
+            </div>
         </div>
-
-        <script>
-          $(document).ready(function () {
-            $("#projectsTable").bootstrapTable();
-          });
-        </script>
-
-        <!-- <form id="action_form" action="#" method="POST" style="display: none">
-          <input
-            type="hidden"
-            name="csrf_token"
-            value="IjU5OWM5ODU5MGJlMDY2Mzc1OGU2MTFkMGRkMGMxMjdiYzJjYzFlYWYi.Zsx1UQ.HiPIjmMd-qDjw34eFq_i31tfRyM"
-          />
-          <input type="hidden" id="action" name="action" />
-        </form> -->
-        <script nonce="">
-          $(document).ready(function () {
-            window.modelActions = new AdminActions();
-          });
-        </script>
-      </div>
     </div>
-  </div>
 </div>
+
 {% endblock %}

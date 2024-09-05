@@ -36,6 +36,10 @@ class MyBaseView(AppBuilderBaseView):
     def fetch_data(self):
         project_id = request.args.get('project_id')
         
+        print("*" * 20)
+        print("project_id: ", project_id)
+        print("*" * 20)
+        
         pg_hook = PostgresHook(postgres_conn_id='airflow_postgres')
         pg_connection = pg_hook.get_conn()
         pg_cursor = pg_connection.cursor()

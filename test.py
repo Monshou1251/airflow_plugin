@@ -1,3 +1,5 @@
+# test.py
+
 import json
 
 import flask
@@ -6,7 +8,7 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request, jsonify, url_for, redirect, flash
 from flask_appbuilder import expose, BaseView as AppBuilderBaseView
 
-from wtforms import Form, SelectField, RadioField, StringField, BooleanField, DateTimeLocalField
+from wtforms import Form, SelectField, RadioField, StringField, BooleanField, DateTimeField
 from airflow.www.app import csrf
 from wtforms.validators import InputRequired
 from croniter import croniter, CroniterBadCronError, CroniterBadDateError
@@ -56,11 +58,36 @@ def validate_cron(form, field) -> bool:
         return False
 
 
-def validate_date(raw_date: str) -> str:
-    if raw_date is None:
-        return 'NULL'
-    else:
-        return raw_date
+class FormProcessing:
+    def __init__(self, source_connection_id, one_c_database, biview_database, biview_project_type,
+                 ct_database, transfer_source_data, target_connection_id, target_database, target_type,
+                 ct_project_id):
+        self.source_connection_id = source_connection_id
+        self.one_c_database = one_c_database
+        self.biview_database = biview_database
+        self.biview_project_type = biview_project_type
+        self.ct_database = ct_database
+        self.transfer_source_data = transfer_source_data
+        self.target_connection_id = target_connection_id
+        self.target_database = target_database
+        self.target_type = target_type
+        self.ct_project_id = ct_project_id
+
+    def jsonify_data(self) -> str:
+        """Transformation data in json format"""
+        result = {
+            'source_connection_id': self.source_connection_id,
+            'one_c_database': self.one_c_database,
+            'biview_database': self.biview_database,
+            'biview_project_type': self.biview_project_type,
+            'ct_database': self.ct_database,
+            'transfer_source_data': self.transfer_source_data,
+            'target_connection_id': self.target_connection_id,
+            'target_database': self.target_database,
+            'target_type': self.target_type,
+            'ct_project_id': self.ct_project_id,
+        }
+        return json.dumps(result, indent=4)
 
 
 class ProjectForm(Form):
@@ -161,29 +188,61 @@ class ProjectForm(Form):
                    },
     )
 
-    update_dags_start_date = DateTimeLocalField('Start Date',
-                                                render_kw={"class": "form-control-short"}
-                                                )
 
-    update_dags_schedule = StringField('Schedule',
-                                       validators=[validate_cron],
-                                       id="schedule",
-                                       render_kw={"class": "form-control-short",
-                                                  "placeholder": "* * * * *"
-                                                  }
-                                       )
+class DAGsUpdateDataForm(Form):
+    """Form for add data of DAG update CT tables data in project"""
 
-    transfer_dags_start_date = DateTimeLocalField('Start Date',
-                                                  render_kw={"class": "form-control-short"}
-                                                  )
+    dag_id = StringField(
+        "DAGs ID",
+        validators=[InputRequired()],
+        id="conn_id",
+        render_kw={"placeholder": "Type DAG ID",
+                   "class": "form-control",
+                   "type": "text"
+                   }
+    )
 
-    transfer_dags_schedule = StringField('Schedule',
-                                         validators=[validate_cron],
-                                         id="schedule",
-                                         render_kw={"class": "form-control-short",
-                                                    "placeholder": "* * * * *"
-                                                    }
-                                         )
+    start_date = DateTimeField('Start Date',
+                               default='',
+                               validators=[InputRequired()],
+                               render_kw={"class": "form-control-short"}
+                               )
+
+    schedule = StringField('Schedule',
+                           validators=[InputRequired(), validate_cron],
+                           default="* * * * *",
+                           render_kw={"class": "form-control-short",
+                                      "data-placeholder": "Select Value"
+                                      }
+                           )
+
+
+class DAGsTransferDataForm(Form):
+    """Form for add data of DAG transfer CT tables data in project"""
+
+    dag_id = StringField(
+        "DAGs ID",
+        validators=[InputRequired()],
+        id="conn_id",
+        render_kw={"placeholder": "Type DAG ID",
+                   "class": "form-control",
+                   "type": "text"
+                   }
+    )
+
+    start_date = DateTimeField('Start Date',
+                               default='',
+                               validators=[InputRequired()],
+                               render_kw={"class": "form-control-short"}
+                               )
+
+    schedule = StringField('Schedule',
+                           validators=[InputRequired(), validate_cron],
+                           default="* * * * *",
+                           render_kw={"class": "form-control-short",
+                                      "data-placeholder": "Select Value"
+                                      }
+                           )
 
 
 class ProjectsView(AppBuilderBaseView):
@@ -206,7 +265,7 @@ class ProjectsView(AppBuilderBaseView):
                             target_database,
                             target_type 
                         FROM airflow.atk_ct.ct_projects
-                    """
+                        """
         with get_connection_postgres().get_conn() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(sql_query)
@@ -253,11 +312,7 @@ class ProjectsView(AppBuilderBaseView):
                                     transfer_source_data,
                                     target_connection_id,
                                     target_database,
-                                    target_type,
-                                    update_dags_start_date,
-                                    update_dags_schedule,
-                                    transfer_dags_start_date,
-                                    transfer_dags_schedule
+                                    target_type
                                     )
                                 VALUES (
                                     '{form.ct_project_id.data}',
@@ -269,13 +324,9 @@ class ProjectsView(AppBuilderBaseView):
                                     {form.transfer_source_data.data},
                                     '{form.target_connection_id.data}',
                                     '{form.target_database.data}',
-                                    '{form.target_type.data}',
-                                    {validate_date(form.update_dags_start_date.data)},
-                                    '{form.update_dags_schedule.data}',
-                                    {validate_date(form.update_dags_start_date.data)},
-                                    '{form.transfer_dags_schedule.data}'
+                                    '{form.target_type.data}'
                                     );"""
-            print(sql_insert_query)
+
             try:
                 with get_connection_postgres().get_conn() as conn:
                     with conn.cursor() as cursor:
@@ -328,15 +379,10 @@ class ProjectsView(AppBuilderBaseView):
                                     transfer_source_data = {form_update.transfer_source_data.data},
                                     target_connection_id = '{form_update.target_connection_id.data}',
                                     target_database = '{form_update.target_database.data}',
-                                    target_type = '{form_update.target_type.data}',
-                                    update_dags_start_date = {validate_date(form_update.update_dags_start_date.data)},
-                                    update_dags_schedule = '{form_update.update_dags_schedule.data}',
-                                    transfer_dags_start_date = {validate_date(form_update.transfer_dags_start_date.data)},
-                                    transfer_dags_schedule = '{form_update.transfer_dags_schedule.data}'
+                                    target_type = '{form_update.target_type.data}'
                                 WHERE ct_project_id = '{form_update.ct_project_id.data}'
                                 ;"""
             print(sql_update_query)
-
             try:
                 with get_connection_postgres().get_conn() as conn:
                     with conn.cursor() as cursor:
@@ -358,9 +404,7 @@ class ProjectsView(AppBuilderBaseView):
     @expose('/projects_to_load', methods=['GET'])
     def projects_to_load(self):
         """Render a new HTML page"""
-        project_name = request.args.get('project_name')
-        connection = request.args.get('connection')
-        return self.render_template("projects_to_load.html", project_name=project_name, connection=connection)
+        return self.render_template("projects_to_load.html")
 
     @expose('/delete/<string:ct_project_id>', methods=['GET'])
     @csrf.exempt
@@ -376,6 +420,20 @@ class ProjectsView(AppBuilderBaseView):
         except Exception as e:
             flash(str(e))
         return flask.redirect(url_for('ProjectsView.project_list'))
+
+    @expose('/add_dags/<string:ct_project_id>', methods=['GET', 'POST'])
+    @csrf.exempt
+    def add_dags_on_project(self, ct_project_id):
+        """Add DAGs on project"""
+
+        form_dag_update_data = DAGsUpdateDataForm()
+
+        form_dag_transfer_data = DAGsTransferDataForm
+
+        return self.render_template("add_dags_for_project.html",
+                                    form_dag_transfer_data=form_dag_transfer_data,
+                                    form_dag_update_data=form_dag_update_data)
+
 
 
 v_appbuilder_view = ProjectsView()

@@ -67,13 +67,131 @@
         margin: 0;
     } */
 
-  #project_type {
-    list-style-type: none;
-    padding-left: 0;
+  .form-check {
+    display: flex;
+    align-items: center;
   }
 
-  #project_type li {
+  .form-check ul {
+    list-style-type: none;
+    padding-left: 0;
+    margin: 0;
+    display: flex;
+    gap: 20px;
+  }
+
+  .form-check-input {
+    display: none;
+  }
+
+  .form-check label {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    color: #495057;
+    background-color: #fff;
+  }
+
+  .form-check-input:checked + label {
+    background-color: #007bff;
+    color: #fff;
+    border-color: #007bff;
+  }
+
+  .form-check-input:checked + label::before {
+    color: #fff;
+    font-weight: bold;
+    margin-right: 5px;
+  }
+
+  .form-check label:hover {
+    background-color: #f8f9fa;
+  }
+
+  /* Всплывающая форма – по умолчанию скрыта */
+  .form-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+  }
+
+  .form-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    z-index: 9;
+    padding: 20px;
+    width: 300px;
+    animation: slide-down 0.5s ease-out; /* Анимация выпадания вниз */
+  }
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .form-popup h5 {
+    font-size: 16px;
     margin-bottom: 10px;
+    font-weight: 700;
+    color: #3d5170; /* Цвет в стиле Apache Airflow */
+  }
+
+  .form-popup .form-group label {
+    color: #3d5170;
+    font-weight: 600;
+  }
+
+  .form-popup button {
+    background-color: #017cff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .form-popup button:hover {
+    background-color: #0056b3;
+  }
+
+  .form-popup .btn.cancel {
+    background-color: #e0e0e0;
+    color: #333;
+    margin-top: 15px;
+  }
+
+  .btn-secondary {
+    position: relative;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-secondary:hover .form-popup {
+    display: block;
+    position: absolute;
+    top: 100%;
+    right: 0;
   }
 </style>
 
@@ -81,92 +199,105 @@
 <div class="container-form">
   <div class="panel panel-primary">
     <div class="panel-heading">
-      <h4>Добавить проект</h4>
+      <h4>Add CT Project</h4>
     </div>
     <div class="panel-body">
       <form id="connection_form" method="POST">
         <div class="form-group row">
           <label class="col-sm-2 col-form-label"
-            >{{ form.project_name.label }}<strong class="text-danger"
-              >*</strong
+            >{{ form.ct_project_id.label }}<strong class="text-danger"
+              > *</strong
             ></label
           >
-          <div class="col-sm-10">{{ form.project_name }}</div>
+          <div class="col-sm-10">{{ form.ct_project_id }}</div>
         </div>
+
         <div class="form-group row">
           <label class="col-sm-2 col-form-label"
-            >{{ form.connection.label }}<strong class="text-danger"
-              >*</strong
+            >{{ form.source_connection_id.label }}<strong class="text-danger"
+              > *</strong
             ></label
           >
-          <div class="col-sm-10">{{ form.connection }}</div>
+          <div class="col-sm-10">{{ form.source_connection_id }}</div>
         </div>
+
         <div class="form-group row">
           <label class="col-sm-2 col-form-label"
-            >{{ form.load_type.label }}
-            <strong class="text-danger">*</strong>
+            >{{ form.one_c_database.label }}<strong class="text-danger"
+              > *</strong
+            ></label
+          >
+          <div class="col-sm-10">{{ form.one_c_database }}</div>
+        </div>
+
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label"
+            >{{ form.biview_database.label }}<strong class="text-danger"
+              > *</strong
+            ></label
+          >
+          <div class="col-sm-10">{{ form.biview_database }}</div>
+        </div>
+
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label"
+            >{{ form.biview_project_type.label }}
+            <strong class="text-danger"> *</strong>
           </label>
           <div class="col-sm-10">
-            <div class="form-check">{{ form.load_type }}</div>
+            <div class="form-check">{{ form.biview_project_type }}</div>
           </div>
         </div>
+
         <div class="form-group row">
           <label class="col-sm-2 col-form-label"
-            >{{ form.project_type.label }}
-            <strong class="text-danger">*</strong>
-          </label>
-          <div class="col-sm-10">
-            <div class="form-check">{{ form.project_type }}</div>
+            >{{ form.ct_database.label }}<strong class="text-danger"
+              > *</strong
+            ></label
+          >
+          <div class="col-sm-10">{{ form.ct_database }}</div>
+        </div>
+
+        <div class="form-group row">
+          <label class="col-sm-2 col-form-label"
+            >{{ form.transfer_source_data.label }}<strong class="text-danger"
+              > *</strong
+            ></label
+          >
+          <div class="col-sm-10">{{ form.transfer_source_data }}</div>
+        </div>
+
+        <div id="targetFields" class="target-fields">
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label"
+              >{{ form.target_connection_id.label }}<strong class="text-danger"
+                > *</strong
+              ></label
+            >
+            <div class="col-sm-10">{{ form.target_connection_id }}</div>
+          </div>
+
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label"
+              >{{ form.target_database.label }}<strong class="text-danger"
+                > *</strong
+              ></label
+            >
+            <div class="col-sm-10">{{ form.target_database }}</div>
+          </div>
+
+          <div class="form-group row">
+            <label class="col-sm-2 col-form-label"
+              >{{ form.target_type.label }}<strong class="text-danger"
+                > *</strong
+              ></label
+            >
+            <div class="col-sm-10">
+              <div class="form-check">{{ form.target_type }}</div>
+            </div>
           </div>
         </div>
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.database_source.label }}<strong class="text-danger"
-              >*</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.database_source }}</div>
-        </div>
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.database_change_tracking.label }}<strong
-              class="text-danger"
-              >*</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.database_change_tracking }}</div>
-        </div>
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.start.label }}<strong class="text-danger">*</strong></label
-          >
-          <div class="col-sm-10">{{ form.start }}</div>
-        </div>
-        <div class="form-group row">
-          <label class="col-sm-2 col-form-label"
-            >{{ form.schedule.label }}<strong class="text-danger"
-              >*</strong
-            ></label
-          >
-          <div class="col-sm-10">{{ form.schedule }}</div>
-          <script>
-            const cronInput = document.getElementById("schedule");
-            const descriptionElement =
-              document.getElementById("cronDescription");
-            function interpretCron() {
-              const cronValue = cronInput.value;
-              try {
-                const description = cronstrue.toString(cronValue, {
-                  locale: "ru",
-                });
-                descriptionElement.innerText = `This cron expression means: ${description}`;
-              } catch (e) {
-                descriptionElement.innerText = "Invalid cron expression";
-              }
-            }
-            cronInput.addEventListener("input", interpretCron);
-          </script>
-        </div>
+
         <div class="button-submit">
           <button
             type="submit"
@@ -176,6 +307,7 @@
           >
             Save
           </button>
+
           <a
             href="#"
             class="btn btn-secondary btn-no-margin"
@@ -191,27 +323,118 @@
             data-original-title="Back"
             ><span class="sr-only">Назад</span><i class="fa fa-arrow-left"></i>
           </a>
+
+          <div class="form-popup" id="myForm">
+            <h5>Update CT Tables Data</h5>
+
+            <div class="form-group row">
+              {{ form.update_dags_start_date.label }}
+              <div class="col-sm-10">
+                <div class="form-check">{{ form.update_dags_start_date }}</div>
+              </div>
+            </div>
+
+            <div class="form-group row">
+              {{ form.update_dags_schedule.label }}
+              <div class="col-sm-10">
+                <div class="form-check">{{ form.update_dags_schedule }}</div>
+              </div>
+            </div>
+
+            <h5>Transfer Data to Target</h5>
+
+            <div class="form-group row">
+              {{ form.transfer_dags_start_date.label }}
+              <div class="col-sm-10">
+                <div class="form-check">
+                  {{ form.transfer_dags_start_date }}
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group row">
+              {{ form.transfer_dags_schedule.label }}
+              <div class="col-sm-10">
+                <div class="form-check">{{ form.transfer_dags_schedule }}</div>
+              </div>
+            </div>
+            <button type="button" class="btn cancel" onclick="closeForm()">
+              Close
+            </button>
+          </div>
         </div>
+
+        <script>
+          function openForm() {
+            var form = document.getElementById("myForm");
+            form.style.display =
+              form.style.display === "block" ? "none" : "block";
+          }
+
+          function closeForm() {
+            document.getElementById("myForm").style.display = "none";
+          }
+
+          document
+            .getElementById("dagsButton")
+            .addEventListener("click", function (e) {
+              e.preventDefault();
+              openForm();
+            });
+        </script>
       </form>
     </div>
   </div>
 </div>
 
 <script>
-  document.getElementById('tables-list-btn').addEventListener('click', function(event) {
-    event.preventDefault(); // Prevent the default action
+  document.addEventListener("DOMContentLoaded", function () {
+    const transferSourceDataCheckbox = document.querySelector(
+      "#{{ form.transfer_source_data.id }}"
+    );
+    const targetFields = document.getElementById("targetFields");
 
-    // Get selected values
-    const projectName = document.querySelector('[name="project_name"]').value;
-    const connection = document.querySelector('[name="connection"]').value;
+    function toggleTargetFields() {
+      if (transferSourceDataCheckbox.checked) {
+        targetFields.style.display = "block";
+      } else {
+        targetFields.style.display = "none";
+      }
+    }
 
-    // Construct the URL with query parameters
-    const url = "{{ url_for('ProjectsView.projects_to_load') }}" + 
-                `?project_name=${encodeURIComponent(projectName)}&connection=${encodeURIComponent(connection)}`;
+    toggleTargetFields();
 
-    // Redirect to the constructed URL
-    window.location.href = url;
+    transferSourceDataCheckbox.addEventListener("change", toggleTargetFields);
   });
+
+  document
+    .getElementById("tables-list-btn")
+    .addEventListener("click", function (event) {
+      event.preventDefault(); // Prevent the default action
+
+      // Get selected values
+      const projectName = document.querySelector(
+        '[name="ct_project_id"]'
+      ).value;
+
+      console.log("ct_project_id", projectName);
+
+      const connection = document.querySelector(
+        '[name="source_connection_id"]'
+      ).value;
+
+      console.log("source_connection_id", connection);
+
+      // Construct the URL with query parameters
+      const url =
+        "{{ url_for('ProjectsView.projects_to_load') }}" +
+        `?project_name=${encodeURIComponent(
+          projectName
+        )}&connection=${encodeURIComponent(connection)}`;
+
+      // Redirect to the constructed URL
+      window.location.href = url;
+    });
 </script>
 
 {% endblock %}

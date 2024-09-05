@@ -22,6 +22,11 @@
 
 <!-- <script src="../static/js/ag-grid-community.min.noStyle.js"></script> -->
 <style>
+  /* Override AG Grid border color */
+  .ag-theme-alpine {
+    --ag-border-color: #f0f0f0;
+  }
+
   .container-form {
     margin-top: 20px;
     padding: 0 15px;
@@ -147,6 +152,8 @@
 <script>
   const connection = "{{ connection }}";
   const project_id = "{{ project_name }}";
+  console.log("connection: ", connection);
+  console.log("project_id: ", project_id);
   const dataToSend = [];
   let gridOptions = null;
 
@@ -203,9 +210,8 @@
           headerName: "", // No header name
           field: "select", // Field name (optional)
           width: 50, // Adjust width as needed
-          suppressMenu: true, // Disable filtering menu
-          suppressSizeToFit: true, // Disable resizing
-          pinned: "left", // Optionally pin the column to the left
+          suppressHeaderMenuButton: true, // Disable filtering menu
+          resizable: false,
         },
         ...data.columns.map((col) => ({
           headerName: col.toUpperCase(),
