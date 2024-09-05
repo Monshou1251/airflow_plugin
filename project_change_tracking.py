@@ -270,9 +270,9 @@ class ProjectsView(AppBuilderBaseView):
                                     '{form.target_connection_id.data}',
                                     '{form.target_database.data}',
                                     '{form.target_type.data}',
-                                    '{validate_date(form.update_dags_start_date.data)}',
+                                    {validate_date(form.update_dags_start_date.data)},
                                     '{form.update_dags_schedule.data}',
-                                    '{validate_date(form.update_dags_start_date.data)}',
+                                    {validate_date(form.update_dags_start_date.data)},
                                     '{form.transfer_dags_schedule.data}'
                                     );"""
             print(sql_insert_query)
@@ -329,9 +329,9 @@ class ProjectsView(AppBuilderBaseView):
                                     target_connection_id = '{form_update.target_connection_id.data}',
                                     target_database = '{form_update.target_database.data}',
                                     target_type = '{form_update.target_type.data}',
-                                    update_dags_start_date = '{validate_date(form_update.update_dags_start_date.data)}',
+                                    update_dags_start_date = {validate_date(form_update.update_dags_start_date.data)},
                                     update_dags_schedule = '{form_update.update_dags_schedule.data}',
-                                    transfer_dags_start_date = '{validate_date(form_update.transfer_dags_start_date.data)}',
+                                    transfer_dags_start_date = {validate_date(form_update.transfer_dags_start_date.data)},
                                     transfer_dags_schedule = '{form_update.transfer_dags_schedule.data}'
                                 WHERE ct_project_id = '{form_update.ct_project_id.data}'
                                 ;"""
