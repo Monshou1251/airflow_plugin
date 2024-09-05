@@ -1,6 +1,9 @@
 {% extends base_template %}
 
 {% block content %}
+
+<script src="https://unpkg.com/bootstrap-table@1.20.2/dist/bootstrap-table.min.js"></script>
+
 <div class="container">
     <div class="row">
         <link rel="stylesheet" type="text/css" href="/static/dist/flash.39f43f5a4fffad4cd720.css">
@@ -35,7 +38,7 @@
                         </th>
                         <th></th>
                         {% for label in projects[0] %}
-                        <th>
+                        <th data-sortable="true">
                             {{ label }}
                         </th>
                         {% endfor %}
@@ -85,6 +88,13 @@
                 </tbody>
             </table>
         </div>
+
+        <script>
+          $(document).ready(function () {
+            $("#projectsTable").bootstrapTable();
+          });
+        </script>
+
         <form id="action_form" action="#" method="POST" style="display: none">
             <input type="hidden" name="csrf_token" value="IjU5OWM5ODU5MGJlMDY2Mzc1OGU2MTFkMGRkMGMxMjdiYzJjYzFlYWYi.Zsx1UQ.HiPIjmMd-qDjw34eFq_i31tfRyM"/>
             <input type="hidden" id="action" name="action" />

@@ -114,6 +114,85 @@
       background-color: #f8f9fa;
   }
 
+   /* Всплывающая форма – по умолчанию скрыта */
+  .form-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 3px solid #f1f1f1;
+    z-index: 9;
+  }
+
+  .form-popup {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    right: 15px;
+    border: 1px solid #ddd;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    z-index: 9;
+    padding: 20px;
+    width: 300px;
+    animation: slide-down 0.5s ease-out; /* Анимация выпадания вниз */
+  }
+
+  @keyframes slide-down {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .form-popup h5 {
+    font-size: 16px;
+    margin-bottom: 10px;
+    font-weight: 700;
+    color: #3d5170; /* Цвет в стиле Apache Airflow */
+  }
+
+  .form-popup .form-group label {
+    color: #3d5170;
+    font-weight: 600;
+  }
+
+  .form-popup button {
+    background-color: #017cff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+
+  .form-popup button:hover {
+    background-color: #0056b3;
+  }
+
+  .form-popup .btn.cancel {
+    background-color: #e0e0e0;
+    color: #333;
+    margin-top: 15px;
+  }
+
+  .btn-secondary {
+    position: relative;
+    transition: background-color 0.3s ease;
+  }
+
+  .btn-secondary:hover .form-popup {
+    display: block;
+    position: absolute;
+    top: 100%;
+    right: 0;
+  }
 
 </style>
 
@@ -191,12 +270,14 @@
 
                 <div id="targetFields" class="target-fields">
                     <div class="form-group row">
-                        <label class="col-sm-2 col-form-label">{{ form.target_connection_id.label }}<strong class="text-danger"> *</strong></label>
+                        <label class="col-sm-2 col-form-label">{{ form.target_connection_id.label }}<strong
+                                class="text-danger"> *</strong></label>
                         <div class="col-sm-10">{{ form.target_connection_id }}</div>
                     </div>
 
                     <div class="form-group row">
-                        <label class="col-sm-2 col-form-label">{{ form.target_database.label }}<strong class="text-danger"> *</strong></label>
+                        <label class="col-sm-2 col-form-label">{{ form.target_database.label }}<strong
+                                class="text-danger"> *</strong></label>
                         <div class="col-sm-10">{{ form.target_database }}</div>
                     </div>
 
@@ -208,35 +289,77 @@
                     </div>
                 </div>
 
+
                 <div class="button-submit">
-                    <button
-                            type="submit"
-                            class="btn btn-primary btn-no-margin"
-                            name="action"
-                            value="save"
-                    >
+                    <button type="submit" class="btn btn-primary btn-no-margin" name="action" value="save">
                         Save
                     </button>
-                    <a
-                            href="{{ url_for('ProjectsView.projects_to_load') }}"
-                            class="btn btn-secondary btn-no-margin"
-                    >Tables List</a
-                    >
-                    <a
-                            href="#"
-                            class="btn btn-secondary btn-no-margin"
-                    >DAGs</a
-                    >
-                    <a
-                            href="{{ url_for('ProjectsView.project_list') }}"
-                            class="btn btn-sm btn-default btn-no-margin"
-                            data-toggle="tooltip"
-                            rel="tooltip"
-                            title=""
-                            data-original-title="Back"
-                    ><span class="sr-only">Back</span><i class="fa fa-arrow-left"></i>
+
+                    <a href="{{ url_for('ProjectsView.projects_to_load') }}" class="btn btn-secondary btn-no-margin">Tables
+                        List</a>
+
+                    <button class="btn btn-secondary btn-no-margin" id="dagsButton">DAGs</button>
+
+                    <a href="{{ url_for('ProjectsView.project_list') }}" class="btn btn-sm btn-default btn-no-margin"
+                       data-toggle="tooltip"
+                       rel="tooltip" title="" data-original-title="Back">
+                        <span class="sr-only">Back</span><i class="fa fa-arrow-left"></i>
                     </a>
+
+                    <div class="form-popup" id="myForm">
+                        <h5>Update CT Tables Data</h5>
+
+                        <div class="form-group row">
+                            {{ form.update_dags_start_date.label }}
+                            <div class="col-sm-10">
+                                <div class="form-check">{{ form.update_dags_start_date }}</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            {{ form.update_dags_schedule.label }}
+                            <div class="col-sm-10">
+                                <div class="form-check">{{ form.update_dags_schedule }}</div>
+                            </div>
+                        </div>
+
+                        <h5>Transfer Data to Target</h5>
+
+                        <div class="form-group row">
+                            {{ form.transfer_dags_start_date.label }}
+                            <div class="col-sm-10">
+                                <div class="form-check">
+                                    {{ form.transfer_dags_start_date }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            {{ form.transfer_dags_schedule.label }}
+                            <div class="col-sm-10">
+                                <div class="form-check">{{ form.transfer_dags_schedule }}</div>
+                            </div>
+
+                        </div>
+                        <button type="button" class="btn cancel" onclick="closeForm()">Close</button>
+                    </div>
                 </div>
+
+                <script>
+                    function openForm() {
+                      var form = document.getElementById("myForm");
+                      form.style.display = (form.style.display === "block") ? "none" : "block";
+                    }
+
+                    function closeForm() {
+                      document.getElementById("myForm").style.display = "none";
+                    }
+
+                    document.getElementById('dagsButton').addEventListener('click', function (e) {
+                      e.preventDefault();
+                      openForm();
+                    });
+                </script>
             </form>
         </div>
     </div>
@@ -260,6 +383,13 @@
 
         transferSourceDataCheckbox.addEventListener('change', toggleTargetFields);
     });
+
+
+
+
+
+
+
 </script>
 
 {% endblock %}
