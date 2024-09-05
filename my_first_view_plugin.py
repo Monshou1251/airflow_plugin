@@ -7,12 +7,15 @@ from airflow.plugins_manager import AirflowPlugin
 from airflow.hooks.mssql_hook import MsSqlHook
 from airflow.hooks.postgres_hook import PostgresHook
 from airflow.www.app import csrf
+import os
 
 
 my_blueprint = Blueprint(
     "mssql_plugin",
     __name__,
     template_folder="templates",
+    static_folder="static",  # Reference to the folder inside 'plugins'
+    static_url_path="/static/mssql_plugin"
 )
 
 class MyBaseView(AppBuilderBaseView):

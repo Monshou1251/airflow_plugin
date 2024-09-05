@@ -11,12 +11,10 @@
         <script src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.js"></script>
 
         <style>
-          /* Override AG Grid border color */
           .ag-theme-alpine {
               --ag-border-color: #f0f0f0;
           }
 
-          /* Center the checkboxes and actions vertically */
           .custom-cell {
               display: flex;
               align-items: center;
@@ -37,7 +35,7 @@
                     </a>
                 </div>
 
-                <div id="ag-grid-container" class="ag-theme-alpine" style="height: 500px; width: 100%;"></div>
+                <div id="ag-grid-container" class="ag-theme-alpine" style="height: 500px; width: 100%; flex: 1;"></div>
 
                 <script>
                     // Sample column definitions for the AG Grid
