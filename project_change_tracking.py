@@ -6,7 +6,7 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request, jsonify, url_for, redirect, flash
 from flask_appbuilder import expose, BaseView as AppBuilderBaseView
 
-from wtforms import Form, SelectField, RadioField, StringField, BooleanField, DateTimeLocalField
+from wtforms import Form, SelectField, RadioField, StringField, BooleanField, DateTimeLocalField, TimeField, DateField
 from airflow.www.app import csrf
 from wtforms.validators import InputRequired
 from croniter import croniter, CroniterBadCronError, CroniterBadDateError
@@ -56,11 +56,18 @@ def validate_cron(form, field) -> bool:
         return False
 
 
-def validate_date(raw_date: str) -> str:
+def replace_response_date(raw_date: str) -> str:
     if raw_date is None:
         return 'NULL'
     else:
-        return raw_date
+        return f"'{raw_date}'"
+
+
+def replace_response_time(raw_time: str) -> str:
+    if raw_time is None:
+        return 'NULL'
+    else:
+        return f"'{raw_time}'"
 
 
 class ProjectForm(Form):
@@ -161,9 +168,10 @@ class ProjectForm(Form):
                    },
     )
 
-    update_dags_start_date = DateTimeLocalField('Start Date',
-                                                render_kw={"class": "form-control-short"}
-                                                )
+    update_dags_start_date = DateField('Start Date',
+                                       render_kw={"class": "form-control-short"}
+                                       )
+    update_dags_start_time = TimeField('Start time')
 
     update_dags_schedule = StringField('Schedule',
                                        validators=[validate_cron],
@@ -173,9 +181,11 @@ class ProjectForm(Form):
                                                   }
                                        )
 
-    transfer_dags_start_date = DateTimeLocalField('Start Date',
-                                                  render_kw={"class": "form-control-short"}
-                                                  )
+    transfer_dags_start_date = DateField('Start Date',
+                                         render_kw={"class": "form-control-short"}
+                                         )
+
+    transfer_dags_start_time = TimeField('Start time')
 
     transfer_dags_schedule = StringField('Schedule',
                                          validators=[validate_cron],
@@ -255,8 +265,10 @@ class ProjectsView(AppBuilderBaseView):
                                     target_database,
                                     target_type,
                                     update_dags_start_date,
+                                    update_dags_start_time,
                                     update_dags_schedule,
                                     transfer_dags_start_date,
+                                    transfer_dags_start_time,
                                     transfer_dags_schedule
                                     )
                                 VALUES (
@@ -270,9 +282,11 @@ class ProjectsView(AppBuilderBaseView):
                                     '{form.target_connection_id.data}',
                                     '{form.target_database.data}',
                                     '{form.target_type.data}',
-                                    {validate_date(form.update_dags_start_date.data)},
+                                    {replace_response_date(form.update_dags_start_date.data)},
+                                    {replace_response_time(form.update_dags_start_time.data)},
                                     '{form.update_dags_schedule.data}',
-                                    {validate_date(form.update_dags_start_date.data)},
+                                    {replace_response_date(form.transfer_dags_start_date.data)},
+                                    {replace_response_time(form.transfer_dags_start_time.data)},
                                     '{form.transfer_dags_schedule.data}'
                                     );"""
             print(sql_insert_query)
@@ -309,9 +323,6 @@ class ProjectsView(AppBuilderBaseView):
                 rows = cursor.fetchall()
                 projects_data = [dict(zip(columns, row)) for row in rows][0]
 
-        # projects_data['start_date'] = projects_data['start_date'].strftime('%d.%m.%Y')
-        print(projects_data)
-
         form_existing = ProjectForm(data=projects_data)
 
         form_update = ProjectForm(request.form)
@@ -329,9 +340,15 @@ class ProjectsView(AppBuilderBaseView):
                                     target_connection_id = '{form_update.target_connection_id.data}',
                                     target_database = '{form_update.target_database.data}',
                                     target_type = '{form_update.target_type.data}',
-                                    update_dags_start_date = {validate_date(form_update.update_dags_start_date.data)},
+                                    update_dags_start_date = {replace_response_date(
+                                                                form_update.update_dags_start_date.data)},
+                                    update_dags_start_time = {replace_response_time(
+                                                                form_update.update_dags_start_time.data)},
                                     update_dags_schedule = '{form_update.update_dags_schedule.data}',
-                                    transfer_dags_start_date = {validate_date(form_update.transfer_dags_start_date.data)},
+                                    transfer_dags_start_date = {replace_response_date(
+                                                                form_update.transfer_dags_start_date.data)},
+                                    transfer_dags_start_time = {replace_response_time(
+                                                                form_update.transfer_dags_start_time.data)},
                                     transfer_dags_schedule = '{form_update.transfer_dags_schedule.data}'
                                 WHERE ct_project_id = '{form_update.ct_project_id.data}'
                                 ;"""
@@ -349,6 +366,8 @@ class ProjectsView(AppBuilderBaseView):
             except Exception as e:
                 if 'duplicate key' in str(e):
                     flash("Данное имя проекта уже существует! Выберите другое.", category='warning')
+                elif 'None' in str(e):
+                    flash("Введите дату и время!", category='warning')
                 else:
                     flash(str(e), category='warning')
                 return self.render_template("edit_project.html", form=form_update)
