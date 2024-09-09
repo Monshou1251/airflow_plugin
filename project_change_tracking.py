@@ -15,6 +15,8 @@ from airflow import settings
 from airflow.models import Connection
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook as PH
+from airflow.providers.exasol.hooks.exasol import ExasolHook as EH
+
 
 #  Инициализация фронт-части плагина
 bp = Blueprint(
@@ -35,6 +37,14 @@ def get_all_database_mssql():
     mssql_hook = MsSqlHook(mssql_conn_id='mssql_af_net')
     sql = "SELECT name, database_id FROM sys.databases;"
     databases = [i[0] for i in mssql_hook.get_records(sql)]
+    return databases
+
+
+def get_all_database_exasol():
+    """Получение connections из базы данных exasol"""
+    exasol_hook = EH(conn_name_attr='exa_af_net')
+    sql = "SELECT name, database_id FROM sys.databases;"
+    databases = [i[0] for i in exasol_hook.get_records(sql)]
     return databases
 
 
@@ -146,7 +156,7 @@ class ProjectForm(Form):
 
     target_database = SelectField(
         'Target Database',
-        choices=get_all_database_mssql(),
+        choices=get_all_database_exasol(),
         id="conn_type4",
         name="conn_type4",
         render_kw={"class": "form-control",

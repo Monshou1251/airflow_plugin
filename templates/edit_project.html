@@ -400,6 +400,30 @@
                     function openForm() {
                         var form = document.getElementById("myForm");
                         form.style.display = (form.style.display === "block") ? "none" : "block";
+
+                        if (form.style.display === "block") {
+                            const now = new Date();
+                            const utcDate = now.toISOString().split('T')[0];
+                            const utcTime = now.toISOString().split('T')[1].split(':').slice(0, 2).join(':');
+
+                            const updateStartDate = document.querySelector('#{{ form.update_dags_start_date.id }}');
+                            const updateStartTime = document.querySelector('#{{ form.update_dags_start_time.id }}');
+                            const transferStartDate = document.querySelector('#{{ form.transfer_dags_start_date.id }}');
+                            const transferStartTime = document.querySelector('#{{ form.transfer_dags_start_time.id }}');
+
+                            if (!updateStartDate.value) {
+                                updateStartDate.value = utcDate;
+                            }
+                            if (!updateStartTime.value) {
+                                updateStartTime.value = utcTime;
+                            }
+                            if (!transferStartDate.value) {
+                                transferStartDate.value = utcDate;
+                            }
+                            if (!transferStartTime.value) {
+                                transferStartTime.value = utcTime;
+                            }
+                        }
                     }
 
                     function closeForm() {
