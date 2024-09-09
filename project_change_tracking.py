@@ -40,10 +40,10 @@ def get_all_database_mssql():
     return databases
 
 
-def get_all_database_exasol():
+def get_all_schema_exasol():
     """Получение connections из базы данных exasol"""
     exasol_hook = EH(conn_name_attr='exa_af_net')
-    sql = "SELECT name, database_id FROM sys.databases;"
+    sql = "SELECT SCHEMA_NAME FROM EXA_ALL_SCHEMAS;"
     databases = [i[0] for i in exasol_hook.get_records(sql)]
     return databases
 
@@ -154,9 +154,9 @@ class ProjectForm(Form):
                    },
     )
 
-    target_database = SelectField(
+    target_schema = SelectField(
         'Target Database',
-        choices=get_all_database_exasol(),
+        choices=get_all_schema_exasol(),
         id="conn_type4",
         name="conn_type4",
         render_kw={"class": "form-control",
@@ -220,7 +220,7 @@ class ProjectsView(AppBuilderBaseView):
                             ct_database,
                             transfer_source_data,
                             target_connection_id,
-                            target_database,
+                            target_schema,
                             target_type 
                         FROM airflow.atk_ct.ct_projects
                     """
@@ -269,7 +269,7 @@ class ProjectsView(AppBuilderBaseView):
                                     ct_database,
                                     transfer_source_data,
                                     target_connection_id,
-                                    target_database,
+                                    target_schema,
                                     target_type,
                                     update_dags_start_date,
                                     update_dags_start_time,
@@ -287,7 +287,7 @@ class ProjectsView(AppBuilderBaseView):
                                     '{form.ct_database.data}',
                                     {form.transfer_source_data.data},
                                     '{form.target_connection_id.data}',
-                                    '{form.target_database.data}',
+                                    '{form.target_schema.data}',
                                     '{form.target_type.data}',
                                     {replace_response_datetime(form.update_dags_start_date.data)},
                                     {replace_response_datetime(form.update_dags_start_time.data)},
@@ -345,7 +345,7 @@ class ProjectsView(AppBuilderBaseView):
                                     biview_project_type = {form_update.biview_project_type.data},
                                     transfer_source_data = {form_update.transfer_source_data.data},
                                     target_connection_id = '{form_update.target_connection_id.data}',
-                                    target_database = '{form_update.target_database.data}',
+                                    target_schema = '{form_update.target_schema.data}',
                                     target_type = '{form_update.target_type.data}',
                                     update_dags_start_date = {replace_response_datetime(
                                                                 form_update.update_dags_start_date.data)},
