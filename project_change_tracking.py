@@ -34,7 +34,7 @@ def get_all_database_mssql():
     """Получение connections из базы данных mssql"""
     mssql_hook = MsSqlHook(mssql_conn_id='mssql_af_net')
     sql = "SELECT name, database_id FROM sys.databases;"
-    databases = [" "] + [i[0] for i in mssql_hook.get_records(sql)]
+    databases = [i[0] for i in mssql_hook.get_records(sql)]
     return databases
 
 
@@ -42,7 +42,7 @@ def get_all_connections():
     """Получаем все Connections из Apache Airflow"""
     session = settings.Session()
     connections = session.query(Connection).all()
-    connections_list = [" "] + [i.conn_id for i in connections]
+    connections_list = [i.conn_id for i in connections]
     return connections_list
 
 
@@ -56,18 +56,11 @@ def validate_cron(form, field) -> bool:
         return False
 
 
-def replace_response_date(raw_date: str) -> str:
-    if raw_date is None:
+def replace_response_datetime(raw_datetime: str) -> str:
+    if raw_datetime is None:
         return 'NULL'
     else:
-        return f"'{raw_date}'"
-
-
-def replace_response_time(raw_time: str) -> str:
-    if raw_time is None:
-        return 'NULL'
-    else:
-        return f"'{raw_time}'"
+        return f"'{raw_datetime}'"
 
 
 class ProjectForm(Form):
@@ -85,6 +78,7 @@ class ProjectForm(Form):
 
     source_connection_id = SelectField(
         'Source Connection ID',
+        validators=[InputRequired()],
         choices=get_all_connections(),
         id="conn_type",
         render_kw={"class": "form-control",
@@ -94,6 +88,7 @@ class ProjectForm(Form):
 
     one_c_database = SelectField(
         '1C Database',
+        validators=[InputRequired()],
         choices=get_all_database_mssql(),
         id="conn_type1",
         name="conn_type1",
@@ -104,6 +99,7 @@ class ProjectForm(Form):
 
     biview_database = SelectField(
         'BIView Database',
+        validators=[InputRequired()],
         choices=get_all_database_mssql(),
         id="conn_type2",
         name="conn_type2",
@@ -126,6 +122,7 @@ class ProjectForm(Form):
 
     ct_database = SelectField(
         'CT Database',
+        validators=[InputRequired()],
         choices=get_all_database_mssql(),
         id="conn_type3",
         name="conn_type3",
@@ -160,7 +157,7 @@ class ProjectForm(Form):
     target_type = SelectField(
         'Target Type',
         default=' ',
-        choices=[' ', 'ODS', 'HODS'],
+        choices=['ODS', 'HODS'],
         id="conn_type5",
         name="conn_type5",
         render_kw={"class": "form-control",
@@ -171,7 +168,7 @@ class ProjectForm(Form):
     update_dags_start_date = DateField('Start Date',
                                        render_kw={"class": "form-control-short"}
                                        )
-    update_dags_start_time = TimeField('Start time')
+    update_dags_start_time = TimeField('Start time (UTC)')
 
     update_dags_schedule = StringField('Schedule',
                                        validators=[validate_cron],
@@ -185,7 +182,7 @@ class ProjectForm(Form):
                                          render_kw={"class": "form-control-short"}
                                          )
 
-    transfer_dags_start_time = TimeField('Start time')
+    transfer_dags_start_time = TimeField('Start time (UTC)')
 
     transfer_dags_schedule = StringField('Schedule',
                                          validators=[validate_cron],
@@ -282,11 +279,11 @@ class ProjectsView(AppBuilderBaseView):
                                     '{form.target_connection_id.data}',
                                     '{form.target_database.data}',
                                     '{form.target_type.data}',
-                                    {replace_response_date(form.update_dags_start_date.data)},
-                                    {replace_response_time(form.update_dags_start_time.data)},
+                                    {replace_response_datetime(form.update_dags_start_date.data)},
+                                    {replace_response_datetime(form.update_dags_start_time.data)},
                                     '{form.update_dags_schedule.data}',
-                                    {replace_response_date(form.transfer_dags_start_date.data)},
-                                    {replace_response_time(form.transfer_dags_start_time.data)},
+                                    {replace_response_datetime(form.transfer_dags_start_date.data)},
+                                    {replace_response_datetime(form.transfer_dags_start_time.data)},
                                     '{form.transfer_dags_schedule.data}'
                                     );"""
             print(sql_insert_query)
@@ -340,14 +337,14 @@ class ProjectsView(AppBuilderBaseView):
                                     target_connection_id = '{form_update.target_connection_id.data}',
                                     target_database = '{form_update.target_database.data}',
                                     target_type = '{form_update.target_type.data}',
-                                    update_dags_start_date = {replace_response_date(
+                                    update_dags_start_date = {replace_response_datetime(
                                                                 form_update.update_dags_start_date.data)},
-                                    update_dags_start_time = {replace_response_time(
+                                    update_dags_start_time = {replace_response_datetime(
                                                                 form_update.update_dags_start_time.data)},
                                     update_dags_schedule = '{form_update.update_dags_schedule.data}',
-                                    transfer_dags_start_date = {replace_response_date(
+                                    transfer_dags_start_date = {replace_response_datetime(
                                                                 form_update.transfer_dags_start_date.data)},
-                                    transfer_dags_start_time = {replace_response_time(
+                                    transfer_dags_start_time = {replace_response_datetime(
                                                                 form_update.transfer_dags_start_time.data)},
                                     transfer_dags_schedule = '{form_update.transfer_dags_schedule.data}'
                                 WHERE ct_project_id = '{form_update.ct_project_id.data}'
@@ -377,7 +374,9 @@ class ProjectsView(AppBuilderBaseView):
     @expose('/projects_to_load', methods=['GET'])
     def projects_to_load(self):
         """Render a new HTML page"""
-        return self.render_template("projects_to_load.html")
+        project_name = request.args.get('project_name')
+        connection = request.args.get('connection')
+        return self.render_template("projects_to_load.html", project_name=project_name, connection=connection)
 
     @expose('/delete/<string:ct_project_id>', methods=['GET'])
     @csrf.exempt

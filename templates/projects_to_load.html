@@ -1,27 +1,20 @@
 {% extends base_template %} {% block head_css %} {{ super() }}
-<link
-  rel="stylesheet"
-  type="text/css"
-  href="https://unpkg.com/ag-grid-community/styles/ag-grid.css"
-/>
-<link
-  rel="stylesheet"
-  type="text/css"
-  href="https://unpkg.com/ag-grid-community/styles/ag-theme-alpine.css"
-/>
+<link rel="stylesheet" type="text/css" href="{{ url_for('mssql_plugin.static', filename='css/ag-grid.css') }}">
 
-<!-- Include AG-Grid JS -->
-<script
-  type="text/javascript"
-  src="https://unpkg.com/ag-grid-community/dist/ag-grid-community.min.noStyle.js"
-></script>
+<link rel="stylesheet" type="text/css" href="{{ url_for('mssql_plugin.static', filename='css/ag-theme-alpine.css') }}">
 
-<!-- <link rel="stylesheet" type="text/css" href="{{ url_for_asset('ag-theme-alpine.css') }}">
-<link rel="stylesheet" type="text/css" href="{{ url_for_asset('ag-grid.css') }}">
-<script src="{{ url_for_asset('ag-grid-community.min.noStyle.js') }}"></script> -->
+<script type="text/javascript" src="{{ url_for('mssql_plugin.static', filename='js/ag-grid-community.min.noStyle.js') }}"></script>
 
-<!-- <script src="../static/js/ag-grid-community.min.noStyle.js"></script> -->
 <style>
+  /* Override AG Grid border color */
+  .ag-theme-alpine {
+    --ag-border-color: #f0f0f0;
+  }
+
+  .mssql-plugin-form-group p {
+    margin: 0;
+  }
+
   .container-form {
     margin-top: 20px;
     padding: 0 15px;
@@ -36,45 +29,6 @@
     margin: auto;
   }
 
-  .mssql-plugin-form-group {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-
-  .mssql-plugin-form-group label {
-    margin-right: 10px;
-    font-size: 14px;
-  }
-
-  .mssql-plugin-form-group select#mssqlDbConnection {
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 14px;
-    height: 40px;
-    box-sizing: border-box;
-    margin-right: 10px;
-    flex: 1;
-  }
-
-  .mssql-plugin-form-group button#mssqlFetchData {
-    padding: 10px 20px;
-    height: 40px;
-    border: none;
-    border-radius: 5px;
-    background-color: #007bff;
-    color: white;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    min-width: 150px;
-  }
-
-  .mssql-plugin-form-group button#mssqlFetchData:hover {
-    background-color: #0056b3;
-  }
-
   .error-message {
     color: red;
     margin-bottom: 20px;
@@ -87,7 +41,7 @@
   }
 
   .button-submit {
-    display: none; /* Hidden by default */
+    display: flex;
     margin-top: 20px;
     text-align: right;
     gap: 10px;
@@ -101,13 +55,9 @@
     </div>
     <div class="mssql-plugin-container">
       <div class="mssql-plugin-form-group">
-        <label for="mssqlDbConnection">Choose a Database Connection:</label>
-        <select id="mssqlDbConnection">
-          <!-- Options will be populated dynamically -->
-        </select>
-        <button id="mssqlFetchData">Fetch Data</button>
+        <p><strong>Selected Project:</strong> {{ project_name }}</p>
+        <p><strong>Selected Connection:</strong> {{ connection }}</p>
       </div>
-      <div id="errorMessage" class="error-message"></div>
       <div class="ag-grid-container">
         <div
           id="myGrid"
@@ -122,8 +72,13 @@
             name="action"
             value="save"
           >
-            Сохранить
+            Save
           </button>
+          <a
+            id="button_update_tables_list"
+            class="btn btn-secondary btn-no-margin"
+            >Update tables list</a
+          >
           <a
             href="javascript:history.back()"
             class="btn btn-sm btn-default btn-no-margin"
@@ -132,7 +87,7 @@
             title=""
             data-original-title="Back"
           >
-            <span class="sr-only">Назад</span>
+            <span class="sr-only">Back</span>
             <i class="fa fa-arrow-left"></i>
           </a>
         </div>
@@ -142,209 +97,211 @@
 </div>
 
 <script>
+  const connection = "{{ connection }}";
+  const project_id = "{{ project_name }}";
+  console.log("connection: ", connection);
+  console.log("project_id: ", project_id);
   const dataToSend = [];
+  let gridOptions = null;
 
-  document.addEventListener("DOMContentLoaded", function () {
-    // Fetch available connections and populate the dropdown
-    fetch("/mybaseview/fetch_airflow_connections")
-      .then((response) => {
+  document.addEventListener("DOMContentLoaded", () => {
+    const gridDiv = document.querySelector("#myGrid");
+    const errorMessageDiv = createErrorMessageDiv(gridDiv);
+
+    initializeEventListeners();
+
+    // Initial data fetch on page load
+    fetchData(
+      `/mybaseview/fetch_data?project_id=${encodeURIComponent(project_id)}`
+    )
+      .then((data) => initializeGrid(data))
+      .catch(handleError);
+
+    function createErrorMessageDiv(referenceElement) {
+      const div = document.createElement("div");
+      referenceElement.parentNode.insertBefore(div, referenceElement);
+      return div;
+    }
+
+    async function fetchData(url) {
+      try {
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(
             `Network response was not ok: ${response.statusText}`
           );
         }
-        return response.json();
-      })
-      .then((data) => {
-        const selectElement = document.getElementById("mssqlDbConnection");
-        selectElement.innerHTML = "";
-        data.connections.forEach((connId) => {
-          const option = document.createElement("option");
-          option.value = connId;
-          option.text = connId;
-          selectElement.appendChild(option);
+        return await response.json();
+      } catch (error) {
+        handleError(error, "Error fetching data:");
+        throw error;
+      }
+    }
+
+    function initializeGrid(data) {
+      if (data.status === "error") {
+        displayError(data.message || "Failed to fetch data");
+        return;
+      }
+
+      if (!Array.isArray(data.columns) || !Array.isArray(data.results)) {
+        displayError("Invalid data format received.");
+        console.error("Invalid data format:", data);
+        return;
+      }
+
+      const columnDefs = [
+        {
+          headerCheckboxSelection: true, // Adds checkbox to the header
+          checkboxSelection: true, // Adds checkbox to each row
+          headerName: "", // No header name
+          field: "select", // Field name (optional)
+          width: 50, // Adjust width as needed
+          suppressHeaderMenuButton: true, // Disable filtering menu
+          resizable: false,
+        },
+        ...data.columns.map((col) => ({
+          headerName: col.toUpperCase(),
+          field: col,
+          flex: 1,
+          editable: col === "load",
+          cellRenderer: col === "load" ? "agCheckboxCellRenderer" : undefined,
+        })),
+      ];
+
+      const rowData = data.results;
+
+      if (gridOptions) {
+        gridOptions.api.destroy();
+        gridDiv.innerHTML = "";
+      }
+
+      gridOptions = {
+        columnDefs,
+        rowData,
+        pagination: true,
+        paginationPageSize: 20,
+        defaultColDef: {
+          sortable: true,
+          filter: true,
+          resizable: true,
+        },
+        onCellValueChanged: handleCellValueChanged,
+        rowSelection: "multiple",
+      };
+
+      new agGrid.Grid(gridDiv, gridOptions);
+    }
+
+    function handleCellValueChanged(event) {
+      const { field } = event.colDef;
+      if (field !== "load") return;
+
+      const { oldValue, newValue, data } = event;
+      if (oldValue === newValue) return;
+
+      const existingEntryIndex = dataToSend.findIndex(
+        (item) => item.table_name === data.table_name
+      );
+
+      if (existingEntryIndex !== -1) {
+        updateExistingEntry(existingEntryIndex, field, oldValue, newValue);
+      } else {
+        createNewEntry(data.table_name, field, oldValue, newValue);
+      }
+    }
+
+    function updateExistingEntry(index, field, oldValue, newValue) {
+      const existingChanges = dataToSend[index].changes || [];
+      const changeIndex = existingChanges.findIndex(
+        (change) => change.field === field
+      );
+
+      if (changeIndex !== -1) {
+        if (existingChanges[changeIndex].oldValue === newValue) {
+          existingChanges.splice(changeIndex, 1);
+          if (existingChanges.length === 0) dataToSend.splice(index, 1);
+        } else {
+          existingChanges[changeIndex].newValue = newValue;
+        }
+      } else {
+        existingChanges.push({ field, oldValue, newValue });
+        dataToSend[index].changes = existingChanges;
+      }
+    }
+
+    function createNewEntry(table_name, field, oldValue, newValue) {
+      dataToSend.push({
+        table_name,
+        changes: [{ field, oldValue, newValue }],
+      });
+    }
+
+    async function updateAndFetchData() {
+      try {
+        const response = await fetch(
+          `/mybaseview/update_and_fetch_data?connection=${encodeURIComponent(
+            connection
+          )}&project_id=${encodeURIComponent(project_id)}`
+        );
+        const data = await response.json();
+
+        if (data.status === "error") {
+          displayError(data.message || "Failed to update data");
+          return;
+        }
+
+        const updatedData = await fetchData(
+          `/mybaseview/fetch_data?project_id=${encodeURIComponent(project_id)}`
+        );
+        initializeGrid(updatedData);
+      } catch (error) {
+        handleError(error, "Error updating data:");
+      }
+    }
+
+    function initializeEventListeners() {
+      document
+        .getElementById("button-send-datatoload")
+        .addEventListener("click", handleDataLoad);
+      document
+        .getElementById("button_update_tables_list")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          updateAndFetchData();
         });
-      })
-      .catch((error) => {
-        console.error("Error fetching connections:", error);
-        const errorMessageDiv = document.getElementById("errorMessage");
-        errorMessageDiv.textContent =
-          "Error fetching connections: " + error.message;
-      });
+    }
 
-    // Add click event listener to the button
-    document
-      .getElementById("mssqlFetchData")
-      .addEventListener("click", function () {
-        const selectedConnection =
-          document.getElementById("mssqlDbConnection").value;
-        const errorMessageDiv = document.getElementById("errorMessage");
-        const gridDiv = document.getElementById("myGrid");
-        const buttonContainer = document.querySelector(".button-submit");
-
-        // Clear previous messages or data
-        errorMessageDiv.textContent = "";
-        gridDiv.innerHTML = ""; // Clear the grid
-        buttonContainer.style.display = "none"; // Hide the buttons initially
-
-        // Show a loading indicator
-        const loadingIndicator = document.createElement("div");
-        loadingIndicator.textContent = "Loading...";
-        gridDiv.appendChild(loadingIndicator);
-
-        fetch(
-          `/mybaseview/fetch_data?connection=${encodeURIComponent(
-            selectedConnection
-          )}`
-        )
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(
-                `Network response was not ok: ${response.statusText}`
-              );
-            }
-            return response.json();
-          })
-          .then((data) => {
-            // Remove loading indicator
-            loadingIndicator.remove();
-
-            if (data.status === "error") {
-              // Display error message
-              errorMessageDiv.textContent =
-                data.message || "Failed to fetch data";
-              return;
-            }
-
-            if (Array.isArray(data.columns) && Array.isArray(data.results)) {
-              const columnDefs = data.columns.map((col) => ({
-                headerName: col.toUpperCase(),
-                field: col,
-                flex: 1,
-                editable: col === "load", // Make only the 'load' column editable
-                cellRenderer:
-                  col === "load" ? "agCheckboxCellRenderer" : undefined, // Checkbox renderer for 'load' column
-              }));
-
-              const rowData = data.results;
-
-              const gridOptions = {
-                columnDefs: columnDefs,
-                rowData: rowData,
-                pagination: true,
-                paginationPageSize: 20,
-                defaultColDef: {
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                },
-                onCellValueChanged: (event) => {
-                  const field = event.colDef.field;
-                  if (field === "load") {
-                    const originalValue = event.oldValue;
-                    const newValue = event.newValue;
-
-                    if (originalValue !== newValue) {
-                      const existingEntryIndex = dataToSend.findIndex(
-                        (item) => item.table_name === event.data.table_name
-                      );
-
-                      if (existingEntryIndex !== -1) {
-                        const existingChanges =
-                          dataToSend[existingEntryIndex].changes || [];
-                        const changeIndex = existingChanges.findIndex(
-                          (change) => change.field === field
-                        );
-
-                        if (changeIndex !== -1) {
-                          // Check if reverted to original value
-                          if (
-                            existingChanges[changeIndex].oldValue === newValue
-                          ) {
-                            // Remove this change if reverted to original
-                            existingChanges.splice(changeIndex, 1);
-                            if (existingChanges.length === 0) {
-                              dataToSend.splice(existingEntryIndex, 1);
-                            }
-                          } else {
-                            // Update the stored change
-                            existingChanges[changeIndex].newValue = newValue;
-                          }
-                        } else {
-                          // Add new change entry
-                          existingChanges.push({
-                            field: field,
-                            oldValue: originalValue,
-                            newValue: newValue,
-                          });
-                          dataToSend[existingEntryIndex].changes =
-                            existingChanges;
-                        }
-                      } else {
-                        // Add new entry
-                        dataToSend.push({
-                          table_name: event.data.table_name,
-                          changes: [
-                            {
-                              field: field,
-                              oldValue: originalValue,
-                              newValue: newValue,
-                            },
-                          ],
-                        });
-                      }
-                    }
-                  }
-                },
-              };
-
-              // Initialize the grid
-              new agGrid.Grid(gridDiv, gridOptions);
-
-              // Show the buttons now that the grid has loaded
-              buttonContainer.style.display = "flex";
-            } else {
-              errorMessageDiv.textContent = "Invalid data format received.";
-              console.error("Invalid data format:", data);
-            }
-          })
-          .catch((error) => {
-            // Remove loading indicator
-            loadingIndicator.remove();
-
-            errorMessageDiv.textContent =
-              "Error fetching data: " + error.message;
-            console.error("Error fetching data:", error);
-          });
-      });
-
-    // Function to send the changes to the server when the button is clicked
-    document
-      .getElementById("button-send-datatoload")
-      .addEventListener("click", function () {
-        console.log("Data to send:");
-        console.log(dataToSend);
-        fetch("/mybaseview/update_data_is_load", {
+    async function handleDataLoad() {
+      try {
+        const response = await fetch("/mybaseview/update_data_is_load", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(dataToSend),
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.status === "success") {
-              alert("Data updated successfully!");
-              // Clear the dataToSend array since the changes are now saved
-              dataToSend.length = 0;
-            } else {
-              alert("Failed to update data: " + data.message);
-            }
-          })
-          .catch((error) => {
-            console.error("Error updating data:", error);
-          });
-      });
+        });
+
+        const result = await response.json();
+        if (result.status === "success") {
+          alert("Data updated successfully!");
+          dataToSend.length = 0; // Clear the dataToSend array after saving
+        } else {
+          alert("Failed to update data: " + result.message);
+        }
+      } catch (error) {
+        handleError(error, "Error updating data:");
+      }
+    }
+
+    function displayError(message) {
+      errorMessageDiv.textContent = message;
+    }
+
+    function handleError(error, prefix = "Error:") {
+      console.error(prefix, error);
+      errorMessageDiv.textContent = `${prefix} ${error.message}`;
+    }
   });
 </script>
 

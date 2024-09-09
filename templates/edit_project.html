@@ -337,8 +337,12 @@
                         Save
                     </button>
 
-                    <a href="{{ url_for('ProjectsView.projects_to_load') }}" class="btn btn-secondary btn-no-margin">Tables
-                        List</a>
+                    <a
+                        href="#"
+                        class="btn btn-secondary btn-no-margin"
+                        id="tables-list-btn"
+                        >Tables List</a
+                    >
 
                     <button class="btn btn-secondary btn-no-margin" id="dagsButton">DAGs</button>
 
@@ -396,17 +400,6 @@
                     function openForm() {
                         var form = document.getElementById("myForm");
                         form.style.display = (form.style.display === "block") ? "none" : "block";
-
-                        if (form.style.display === "block") {
-                            const now = new Date();
-                            const utcDate = now.toISOString().split('T')[0];
-                            const utcTime = now.toISOString().split('T')[1].split(':').slice(0, 2).join(':');;
-
-                            document.querySelector('#{{ form.update_dags_start_date.id }}').value = utcDate;
-                            document.querySelector('#{{ form.update_dags_start_time.id }}').value = utcTime;
-                            document.querySelector('#{{ form.transfer_dags_start_date.id }}').value = utcDate;
-                            document.querySelector('#{{ form.transfer_dags_start_time.id }}').value = utcTime;
-                        }
                     }
 
                     function closeForm() {
@@ -450,6 +443,35 @@
         toggleTargetFields();
 
         transferSourceDataCheckbox.addEventListener('change', toggleTargetFields);
+    });
+
+    document
+    .getElementById("tables-list-btn")
+    .addEventListener("click", function (event) {
+      event.preventDefault(); // Prevent the default action
+
+      // Get selected values
+      const projectName = document.querySelector(
+        '[name="ct_project_id"]'
+      ).value;
+
+      console.log("ct_project_id", projectName);
+
+      const connection = document.querySelector(
+        '[name="source_connection_id"]'
+      ).value;
+
+      console.log("source_connection_id", connection);
+
+      // Construct the URL with query parameters
+      const url =
+        "{{ url_for('ProjectsView.projects_to_load') }}" +
+        `?project_name=${encodeURIComponent(
+          projectName
+        )}&connection=${encodeURIComponent(connection)}`;
+
+      // Redirect to the constructed URL
+      window.location.href = url;
     });
 
 </script>
