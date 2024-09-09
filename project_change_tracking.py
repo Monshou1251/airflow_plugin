@@ -40,9 +40,9 @@ def get_all_database_mssql():
     return databases
 
 
-def get_all_schema_exasol():
+def get_all_schemas_exasol():
     """Получение connections из базы данных exasol"""
-    exasol_hook = EH(conn_name_attr='exa_af_net')
+    exasol_hook = EH(exasol_conn_id='exa_af_net')
     sql = "SELECT SCHEMA_NAME FROM EXA_ALL_SCHEMAS;"
     databases = [i[0] for i in exasol_hook.get_records(sql)]
     return databases
@@ -155,8 +155,8 @@ class ProjectForm(Form):
     )
 
     target_schema = SelectField(
-        'Target Database',
-        choices=get_all_schema_exasol(),
+        'Target Schema',
+        choices=get_all_schemas_exasol(),
         id="conn_type4",
         name="conn_type4",
         render_kw={"class": "form-control",
@@ -178,7 +178,7 @@ class ProjectForm(Form):
     update_dags_start_date = DateField('Start Date',
                                        render_kw={"class": "form-control-short"}
                                        )
-    update_dags_start_time = TimeField('Start time (UTC)')
+    update_dags_start_time = TimeField('Start time')
 
     update_dags_schedule = StringField('Schedule',
                                        validators=[validate_cron],
@@ -188,11 +188,11 @@ class ProjectForm(Form):
                                                   }
                                        )
 
-    transfer_dags_start_date = DateField('Start Date',
+    transfer_dags_start_date = DateField('Start Date (UTC)',
                                          render_kw={"class": "form-control-short"}
                                          )
 
-    transfer_dags_start_time = TimeField('Start time (UTC)')
+    transfer_dags_start_time = TimeField('Start time')
 
     transfer_dags_schedule = StringField('Schedule',
                                          validators=[validate_cron],
