@@ -168,7 +168,7 @@
   document.querySelector(".panel-heading h4").textContent =
     capitalizeFirstLetter(project_id);
 
-  document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", () => {
     const gridDiv = document.querySelector("#myGrid");
     const errorMessageDiv = createErrorMessageDiv(gridDiv);
 
@@ -231,6 +231,7 @@
               col.charAt(0).toUpperCase() + col.slice(1).toLowerCase(),
             field: col,
             flex: 1,
+            headerCheckboxSelection: col === "load" ? true : false,
             editable: col === "load",
             cellRenderer: col === "load" ? "agCheckboxCellRenderer" : undefined,
           })),
@@ -254,6 +255,7 @@
           resizable: true,
         },
         onCellValueChanged: handleCellValueChanged,
+        onSelectionChanged: handleSelectionChanged,
         rowSelection: "multiple",
       };
 
@@ -276,6 +278,20 @@
       } else {
         createNewEntry(data.table_name, field, oldValue, newValue);
       }
+    }
+
+    function handleSelectionChanged(event) {
+      const column = event.columnApi.getAllColumns().find(col => col.colId === 'load');
+      if (!column) return;
+
+      const allNodes = event.api.getDisplayedRowCount();
+      const isHeaderChecked = event.api.getHeaderCheckboxSelection(column);
+
+      event.api.forEachNode(node => {
+        if (node.data) {
+          node.setDataValue(column.colId, isHeaderChecked);
+        }
+      });
     }
 
     function updateExistingEntry(index, field, oldValue, newValue) {
@@ -387,6 +403,7 @@
       errorMessageDiv.textContent = `${prefix} ${error.message}`;
     }
   });
+
 
   window.addEventListener("beforeunload", function (event) {
     if (dataToSend.length > 0) {
