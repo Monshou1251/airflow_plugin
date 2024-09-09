@@ -46,7 +46,7 @@ class MyBaseView(AppBuilderBaseView):
         pg_hook = PostgresHook(postgres_conn_id='airflow_postgres')
         pg_connection = pg_hook.get_conn()
         pg_cursor = pg_connection.cursor()
-        pg_cursor.execute("SELECT * FROM atk_ct.ct_tables WHERE project_id=%s;", (project_id, ))
+        pg_cursor.execute("SELECT * FROM atk_ct.ct_tables WHERE project_id=%s ORDER BY table_name;", (project_id, ))
         pg_results = pg_cursor.fetchall()
         pg_columns = [desc[0] for desc in pg_cursor.description]
 
@@ -68,19 +68,24 @@ class MyBaseView(AppBuilderBaseView):
     def update_and_fetch_data(self):
         connection_id = request.args.get('connection')
         project_id = request.args.get('project_id')
+        biview_database = request.args.get('biview_database')
         print(" * " * 20)
-        print("PROJECT_NAME:", project_id)
+        print("biview_database:", biview_database)
+        print(" * " * 20)
         if not connection_id:
             return jsonify({"status": "error", "message": "No connection selected"})
+
+        if not biview_database:
+            return jsonify({"status": "error", "message": "No biview_database selected"})
 
         try:
             # MSSQL Hook to fetch table names
             mssql_hook = MsSqlHook(mssql_conn_id=connection_id)
-            mssql_query = """
+            mssql_query = f"""
                 SELECT
                     TABLE_NAME
                 FROM 
-                    BU83_BIVIEW1__ct.INFORMATION_SCHEMA.TABLES
+                    {biview_database}.INFORMATION_SCHEMA.TABLES
                 WHERE 
                     TABLE_TYPE = 'BASE TABLE' AND 
                     TABLE_SCHEMA = 'dbo';
@@ -196,8 +201,8 @@ class MyViewPlugin(AirflowPlugin):
     flask_blueprints = [my_blueprint]
     appbuilder_views = [
         {
-            "name": "MSSQL View",
-            "category": "MSSQL table view",
+            # "name": "MSSQL View",
+            # "category": "MSSQL table view",
             "view": my_view,
         }
     ]
