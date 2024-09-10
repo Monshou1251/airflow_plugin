@@ -1,7 +1,4 @@
-import json
-
 import flask
-import pandas as pd
 from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request, jsonify, url_for, redirect, flash
 from flask_appbuilder import expose, BaseView as AppBuilderBaseView
@@ -26,6 +23,42 @@ bp = Blueprint(
 )
 
 
+class GetConnection:
+    """Класс для получения наборов connections"""
+
+    @staticmethod
+    def get_all_connections():
+        """Получаем все Connections из Apache Airflow"""
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connections_list = [i.conn_id for i in connections]
+        return connections_list
+
+    @staticmethod
+    def get_mssql_connection():
+        """Получаем все Connections из Apache Airflow"""
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connections_list = [i.conn_id for i in connections if 'mssql' in i.conn_type]
+        return connections_list
+
+    @staticmethod
+    def get_postgres_connection():
+        """Получаем все Connections из Apache Airflow"""
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connections_list = [i.conn_id for i in connections if 'postgres' in i.conn_type]
+        return connections_list
+
+    @staticmethod
+    def get_exasol_connection():
+        """Получаем все Connections из Apache Airflow"""
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connections_list = [i.conn_id for i in connections if 'exasol' in i.conn_type]
+        return connections_list
+
+
 def get_connection_postgres():
     """Получение хука Postgres"""
     pg_hook = PH.get_hook("airflow_postgres")
@@ -46,14 +79,6 @@ def get_all_schemas_exasol():
     sql = "SELECT SCHEMA_NAME FROM EXA_ALL_SCHEMAS;"
     databases = [i[0] for i in exasol_hook.get_records(sql)]
     return databases
-
-
-def get_all_connections():
-    """Получаем все Connections из Apache Airflow"""
-    session = settings.Session()
-    connections = session.query(Connection).all()
-    connections_list = [i.conn_id for i in connections]
-    return connections_list
 
 
 def validate_cron(form, field) -> bool:
@@ -89,7 +114,7 @@ class ProjectForm(Form):
     source_connection_id = SelectField(
         'Source Connection ID',
         validators=[InputRequired()],
-        choices=get_all_connections(),
+        choices=GetConnection.get_all_connections(),
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -147,7 +172,7 @@ class ProjectForm(Form):
 
     target_connection_id = SelectField(
         'Target Connection ID',
-        choices=get_all_connections(),
+        choices=GetConnection.get_exasol_connection(),
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -175,7 +200,7 @@ class ProjectForm(Form):
                    },
     )
 
-    update_dags_start_date = DateField('Start Date',
+    update_dags_start_date = DateField('Start Date (UTC)',
                                        render_kw={"class": "form-control-short"}
                                        )
     update_dags_start_time = TimeField('Start time')
@@ -210,6 +235,11 @@ class ProjectsView(AppBuilderBaseView):
     @expose('/', methods=['GET'])
     def project_list(self):
         """View list of projects"""
+
+
+        print(GetConnection.get_mssql_connection())
+
+
         sql_query = """
                         SELECT
                             ct_project_id,
