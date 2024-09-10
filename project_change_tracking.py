@@ -225,10 +225,6 @@ class ProjectsView(AppBuilderBaseView):
     def project_list(self):
         """View list of projects"""
 
-
-        print(GetConnection.get_mssql_connection())
-
-
         sql_query = """
                         SELECT
                             ct_project_id,
