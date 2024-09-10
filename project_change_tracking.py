@@ -35,27 +35,16 @@ class GetConnection:
         return connections_list
 
     @staticmethod
-    def get_mssql_connection():
-        """Получаем все Connections из Apache Airflow"""
-        session = settings.Session()
-        connections = session.query(Connection).all()
-        connections_list = [i.conn_id for i in connections if 'mssql' in i.conn_type]
-        return connections_list
+    def get_database_connection(name_database: str) -> list:
+        """
+        Получаем определенный Connection из Apache Airflow
 
-    @staticmethod
-    def get_postgres_connection():
-        """Получаем все Connections из Apache Airflow"""
-        session = settings.Session()
-        connections = session.query(Connection).all()
-        connections_list = [i.conn_id for i in connections if 'postgres' in i.conn_type]
-        return connections_list
+        params:: ['exasol', 'postgres', 'mssql']
+        """
 
-    @staticmethod
-    def get_exasol_connection():
-        """Получаем все Connections из Apache Airflow"""
         session = settings.Session()
         connections = session.query(Connection).all()
-        connections_list = [i.conn_id for i in connections if 'exasol' in i.conn_type]
+        connections_list = [i.conn_id for i in connections if name_database in i.conn_type]
         return connections_list
 
 
@@ -172,7 +161,7 @@ class ProjectForm(Form):
 
     target_connection_id = SelectField(
         'Target Connection ID',
-        choices=GetConnection.get_exasol_connection(),
+        choices=GetConnection.get_database_connection('exasol'),
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
