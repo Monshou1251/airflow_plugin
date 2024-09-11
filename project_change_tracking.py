@@ -434,7 +434,9 @@ class ProjectsView(AppBuilderBaseView):
         """Render a new HTML page"""
         project_name = request.args.get('project_name')
         connection = request.args.get('connection')
-        return self.render_template("projects_to_load.html", project_name=project_name, connection=connection)
+        biview_database = request.args.get('biview_database')
+        return self.render_template("projects_to_load.html", project_name=project_name, connection=connection,
+                                    biview_database=biview_database)
 
     @expose('/delete/<string:ct_project_id>', methods=['GET'])
     @csrf.exempt
