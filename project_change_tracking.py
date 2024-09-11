@@ -1,3 +1,5 @@
+from typing import Dict, Any, List
+
 import flask
 from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request, jsonify, url_for, redirect, flash
@@ -39,12 +41,20 @@ class GetConnection:
         """
         Получаем определенный Connection из Apache Airflow
 
-        params:: ['exasol', 'postgres', 'mssql']
+        params:: ['exasol', 'postgres', 'mssql', 'mysql']
         """
-
+        database_alias = ''
+        if name_database == 'MSSQL':
+            database_alias = 'mssql'
+        elif name_database == 'PostgreSQL':
+            database_alias = 'postgres'
+        elif name_database == 'Exasol':
+            database_alias = 'exasol'
+        elif name_database == 'MYSQL':
+            database_alias = 'mysql'
         session = settings.Session()
         connections = session.query(Connection).all()
-        connections_list = [i.conn_id for i in connections if name_database in i.conn_type]
+        connections_list = [i.conn_id for i in connections if database_alias in i.conn_type]
         return connections_list
 
 
@@ -100,10 +110,19 @@ class ProjectForm(Form):
                    }
     )
 
+    source_database_type = SelectField(
+        "Source Database Type",
+        choices=["MSSQL", "PostgreSQL"],
+        id="conn_type6",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value",
+                   }
+    )
+
     source_connection_id = SelectField(
         'Source Connection ID',
         validators=[InputRequired()],
-        choices=GetConnection.get_all_connections(),
+        choices=GetConnection.get_database_connection("MSSQL"),
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -159,10 +178,19 @@ class ProjectForm(Form):
         'Transfer Source Data'
     )
 
+    target_database_type = SelectField(
+        "Target Database Type",
+        choices=["Exasol", "MYSQL"],
+        id="conn_type7",
+        render_kw={"class": "form-control",
+                   "data-placeholder": "Select Value",
+                   }
+    )
+
     target_connection_id = SelectField(
         'Target Connection ID',
-        choices=GetConnection.get_database_connection('exasol'),
-        id="conn_type",
+        choices=GetConnection.get_database_connection("Exasol"),
+        id="conn_type8",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
                    },
@@ -239,16 +267,18 @@ class ProjectsView(AppBuilderBaseView):
                             target_type 
                         FROM airflow.atk_ct.ct_projects
                     """
+        columns = [field.label.text for field in ProjectForm()]
+        print(columns)
         with get_connection_postgres().get_conn() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(sql_query)
 
                 try:
-                    columns = [field.label.text for field in ProjectForm()]
                     rows = cursor.fetchall()
                     raw_projects = [dict(zip(columns, row)) for row in rows]
 
                     projects = []
+
                     for dictionary in raw_projects:
                         if dictionary['Transfer Source Data'] is False:
                             dictionary['Transfer Source Data'] = 'No'
@@ -260,7 +290,7 @@ class ProjectsView(AppBuilderBaseView):
                     flash(str(e), category="error")
 
         return self.render_template("project_change_tracking.html",
-                                    projects=raw_projects,
+                                    projects=projects,
                                     count_projects=len(raw_projects))
 
     @expose("/add", methods=['GET', 'POST'])
@@ -417,6 +447,13 @@ class ProjectsView(AppBuilderBaseView):
         except Exception as e:
             flash(str(e))
         return flask.redirect(url_for('ProjectsView.project_list'))
+
+    @expose('/api/get_connections/', methods=['GET'])
+    def get_filtered_connections(self):
+        """Получаем JSON с Базами Данных и их соединениями"""
+        database_type = request.args.get('database_type')
+        connections = GetConnection.get_database_connection(database_type)
+        return jsonify(connections)
 
 
 v_appbuilder_view = ProjectsView()
