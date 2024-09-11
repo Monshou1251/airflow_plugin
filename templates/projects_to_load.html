@@ -108,9 +108,9 @@
     </div>
     <div class="mssql-plugin-container">
       <div class="mssql-plugin-form-group">
-        <p><strong>Project:</strong> {{ project_name }}</p>
+        <!-- <p><strong>Project:</strong> {{ project_name }}</p>
         <p><strong>Connection:</strong> {{ connection }}</p>
-        <p><strong>biview_database:</strong> {{ biview_database }}</p>
+        <p><strong>biview_database:</strong> {{ biview_database }}</p> -->
       </div>
       <div class="ag-grid-container">
         <div
@@ -134,7 +134,7 @@
             >Update tables list</a
           >
           <a
-            href="javascript:history.back()"
+            href="javascript:history.go(-2)"
             class="btn btn-sm btn-default btn-no-margin"
             data-toggle="tooltip"
             rel="tooltip"
@@ -168,11 +168,21 @@
   document.querySelector(".panel-heading h4").textContent =
     capitalizeFirstLetter(project_id);
 
-    document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
     const gridDiv = document.querySelector("#myGrid");
     const errorMessageDiv = createErrorMessageDiv(gridDiv);
 
     initializeEventListeners();
+
+    // Set up a listener for the header checkbox click
+    const headerCheckboxes = document.querySelectorAll(
+      '.ag-header-select-all input[type="checkbox"]'
+    );
+    headerCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener("click", () => {
+        handleHeaderCheckboxClick();
+      });
+    });
 
     // Initial data fetch on page load
     fetchData(
@@ -216,24 +226,25 @@
 
       const columnDefs = [
         {
-          headerCheckboxSelection: true, // Adds checkbox to the header
-          checkboxSelection: true, // Adds checkbox to each row
-          headerName: "", // No header name
-          field: "select", // Field name (optional)
-          width: 50, // Adjust width as needed
-          suppressHeaderMenuButton: true, // Disable filtering menu
+          headerCheckboxSelection: true,
+          // checkboxSelection: true,
+          headerName: "Load",
+          field: "load",
+          width: 180,
+          suppressHeaderMenuButton: true,
           resizable: false,
+          editable: true,
+          // sortable: false,
+          filter: false,
+          cellRenderer: "agCheckboxCellRenderer",
         },
         ...data.columns
-          .filter((col) => col !== "project_id")
+          .filter((col) => col !== "project_id" && col !== "load")
           .map((col) => ({
             headerName:
               col.charAt(0).toUpperCase() + col.slice(1).toLowerCase(),
             field: col,
             flex: 1,
-            headerCheckboxSelection: col === "load" ? true : false,
-            editable: col === "load",
-            cellRenderer: col === "load" ? "agCheckboxCellRenderer" : undefined,
           })),
       ];
 
@@ -254,12 +265,49 @@
           filter: true,
           resizable: true,
         },
+        onGridReady: function (params) {
+          // Save grid API reference
+          gridApi = params.api;
+
+          // Set up a listener for header click events
+          const headerCheckboxes = document.querySelectorAll(
+            '.ag-header-select-all input[type="checkbox"]'
+          );
+          headerCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener("click", () => {
+              console.log("Header checkbox clicked");
+              handleHeaderCheckboxClick();
+            });
+          });
+        },
         onCellValueChanged: handleCellValueChanged,
-        onSelectionChanged: handleSelectionChanged,
         rowSelection: "multiple",
       };
 
       new agGrid.Grid(gridDiv, gridOptions);
+    }
+
+    function handleHeaderCheckboxClick() {
+      if (!gridApi) return;
+
+      // Delay to ensure the checkbox state is updated by the browser
+      setTimeout(() => {
+        // Get the current state of the header checkbox after it updates
+        const isChecked = document.querySelector(
+          '.ag-header-select-all input[type="checkbox"]'
+        ).checked;
+
+        // Toggle all load column values based on the header checkbox state
+        toggleLoadColumnValues(isChecked);
+      }, 0); // Timeout with 0ms ensures we check the state after the event processing
+    }
+
+    // Function to toggle all values in the 'load' column based on the header checkbox state
+    function toggleLoadColumnValues(checked) {
+      // Iterate through each row and set the 'load' value based on the header checkbox state
+      gridApi.forEachNodeAfterFilter((node) => {
+        node.setDataValue("load", checked);
+      });
     }
 
     function handleCellValueChanged(event) {
@@ -278,20 +326,6 @@
       } else {
         createNewEntry(data.table_name, field, oldValue, newValue);
       }
-    }
-
-    function handleSelectionChanged(event) {
-      const column = event.columnApi.getAllColumns().find(col => col.colId === 'load');
-      if (!column) return;
-
-      const allNodes = event.api.getDisplayedRowCount();
-      const isHeaderChecked = event.api.getHeaderCheckboxSelection(column);
-
-      event.api.forEachNode(node => {
-        if (node.data) {
-          node.setDataValue(column.colId, isHeaderChecked);
-        }
-      });
     }
 
     function updateExistingEntry(index, field, oldValue, newValue) {
@@ -325,7 +359,9 @@
         const response = await fetch(
           `/mybaseview/update_and_fetch_data?connection=${encodeURIComponent(
             connection
-          )}&project_id=${encodeURIComponent(project_id)}&biview_database=${encodeURIComponent(biview_database)}`
+          )}&project_id=${encodeURIComponent(
+            project_id
+          )}&biview_database=${encodeURIComponent(biview_database)}`
         );
 
         const data = await response.json();
@@ -358,12 +394,17 @@
 
     async function handleDataLoad() {
       try {
+        const payload = {
+          project_id: project_id,
+          data: dataToSend, // Send the array as part of an object
+        };
+
         const response = await fetch("/mybaseview/update_data_is_load", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(dataToSend),
+          body: JSON.stringify(payload),
         });
 
         const result = await response.json();
@@ -403,7 +444,6 @@
       errorMessageDiv.textContent = `${prefix} ${error.message}`;
     }
   });
-
 
   window.addEventListener("beforeunload", function (event) {
     if (dataToSend.length > 0) {

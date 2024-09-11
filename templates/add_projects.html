@@ -52,20 +52,20 @@
   .btn-custom-size {
     width: 34px;
     height: 34px;
-    padding: 0; /* Remove default padding */
+    padding: 0;
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    font-size: 16px; /* Adjust the icon size */
+    font-size: 16px;
   }
 
   .btn-no-margin {
-    margin-right: 0; /* Override the default margin */
+    margin-right: 0;
   }
 
-  /* .button-submit btn btn-primary {
-        margin: 0;
-    } */
+  .button-submit btn btn-primary {
+    margin: 0;
+  }
 
   .form-check {
     display: flex;
@@ -114,7 +114,6 @@
     background-color: #f8f9fa;
   }
 
-  /* Всплывающая форма – по умолчанию скрыта */
   .form-popup {
     display: none;
     position: fixed;
@@ -136,7 +135,7 @@
     z-index: 9;
     padding: 20px;
     width: 300px;
-    animation: slide-down 0.5s ease-out; /* Анимация выпадания вниз */
+    animation: slide-down 0.5s ease-out;
   }
 
   @keyframes slide-down {
@@ -154,7 +153,7 @@
     font-size: 16px;
     margin-bottom: 10px;
     font-weight: 700;
-    color: #3d5170; /* Цвет в стиле Apache Airflow */
+    color: #3d5170;
   }
 
   .form-popup .form-group label {
@@ -192,6 +191,48 @@
     position: absolute;
     top: 100%;
     right: 0;
+  }
+
+  .form-group {
+    margin-bottom: 1rem;
+  }
+
+  .col-form-label {
+    font-weight: bold;
+    font-size: 16px;
+    color: #495057;
+    display: inline-block;
+    padding-right: 10px;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .input-group input {
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+    max-width: 200px;
+    height: 38px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  }
+
+  .input-group input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    outline: none;
+  }
+
+  .mb-3 {
+    margin-bottom: 1rem;
+  }
+
+  .mb-3 {
+    margin-bottom: 1rem;
   }
 </style>
 
@@ -260,9 +301,7 @@
 
         <div class="form-group row">
           <label class="col-sm-2 col-form-label"
-            >{{ form.transfer_source_data.label }}<strong class="text-danger"
-              > *</strong
-            ></label
+            >{{ form.transfer_source_data.label }}</label
           >
           <div class="col-sm-10">{{ form.transfer_source_data }}</div>
         </div>
@@ -270,31 +309,23 @@
         <div id="targetFields" class="target-fields">
           <div class="form-group row">
             <label class="col-sm-2 col-form-label"
-              >{{ form.target_connection_id.label }}<strong class="text-danger"
-                > *</strong
-              ></label
+              >{{ form.target_connection_id.label }}</label
             >
             <div class="col-sm-10">{{ form.target_connection_id }}</div>
           </div>
 
           <div class="form-group row">
             <label class="col-sm-2 col-form-label"
-              >{{ form.target_database.label }}<strong class="text-danger"
-                > *</strong
-              ></label
+              >{{ form.target_schema.label }}</label
             >
-            <div class="col-sm-10">{{ form.target_database }}</div>
+            <div class="col-sm-10">{{ form.target_schema }}</div>
           </div>
 
           <div class="form-group row">
             <label class="col-sm-2 col-form-label"
-              >{{ form.target_type.label }}<strong class="text-danger"
-                > *</strong
-              ></label
+              >{{ form.target_type.label }}</label
             >
-            <div class="col-sm-10">
-              <div class="form-check">{{ form.target_type }}</div>
-            </div>
+            <div class="col-sm-10">{{ form.target_type }}</div>
           </div>
         </div>
 
@@ -314,6 +345,11 @@
             id="tables-list-btn"
             >Tables List</a
           >
+
+          <button class="btn btn-secondary btn-no-margin" id="dagsButton">
+            DAGs
+          </button>
+
           <a
             href="{{ url_for('ProjectsView.project_list') }}"
             class="btn btn-sm btn-default btn-no-margin"
@@ -321,7 +357,8 @@
             rel="tooltip"
             title=""
             data-original-title="Back"
-            ><span class="sr-only">Назад</span><i class="fa fa-arrow-left"></i>
+          >
+            <span class="sr-only">Back</span><i class="fa fa-arrow-left"></i>
           </a>
 
           <div class="form-popup" id="myForm">
@@ -330,14 +367,23 @@
             <div class="form-group row">
               {{ form.update_dags_start_date.label }}
               <div class="col-sm-10">
-                <div class="form-check">{{ form.update_dags_start_date }}</div>
+                <div class="input-group mb-3">
+                  <div class="form-check dag">
+                    {{ form.update_dags_start_date }}
+                  </div>
+                  <div class="form-check dag">
+                    {{ form.update_dags_start_time }}
+                  </div>
+                </div>
               </div>
             </div>
 
             <div class="form-group row">
               {{ form.update_dags_schedule.label }}
               <div class="col-sm-10">
-                <div class="form-check">{{ form.update_dags_schedule }}</div>
+                <div class="form-check dag">
+                  {{ form.update_dags_schedule }}
+                </div>
               </div>
             </div>
 
@@ -346,8 +392,13 @@
             <div class="form-group row">
               {{ form.transfer_dags_start_date.label }}
               <div class="col-sm-10">
-                <div class="form-check">
-                  {{ form.transfer_dags_start_date }}
+                <div class="input-group mb-3">
+                  <div class="form-check dag">
+                    {{ form.transfer_dags_start_date }}
+                  </div>
+                  <div class="form-check dag">
+                    {{ form.transfer_dags_start_time }}
+                  </div>
                 </div>
               </div>
             </div>
@@ -355,11 +406,16 @@
             <div class="form-group row">
               {{ form.transfer_dags_schedule.label }}
               <div class="col-sm-10">
-                <div class="form-check">{{ form.transfer_dags_schedule }}</div>
+                <div class="form-check dag">
+                  {{ form.transfer_dags_schedule }}
+                </div>
               </div>
             </div>
             <button type="button" class="btn cancel" onclick="closeForm()">
               Close
+            </button>
+            <button type="button" class="btn cancel" onclick="clearForm()">
+              Clear
             </button>
           </div>
         </div>
@@ -369,6 +425,30 @@
             var form = document.getElementById("myForm");
             form.style.display =
               form.style.display === "block" ? "none" : "block";
+
+            if (form.style.display === "block") {
+              const now = new Date();
+              const utcDate = now.toISOString().split("T")[0];
+              const utcTime = now
+                .toISOString()
+                .split("T")[1]
+                .split(":")
+                .slice(0, 2)
+                .join(":");
+
+              document.querySelector(
+                "#{{ form.update_dags_start_date.id }}"
+              ).value = utcDate;
+              document.querySelector(
+                "#{{ form.update_dags_start_time.id }}"
+              ).value = utcTime;
+              document.querySelector(
+                "#{{ form.transfer_dags_start_date.id }}"
+              ).value = utcDate;
+              document.querySelector(
+                "#{{ form.transfer_dags_start_time.id }}"
+              ).value = utcTime;
+            }
           }
 
           function closeForm() {
@@ -381,6 +461,17 @@
               e.preventDefault();
               openForm();
             });
+        </script>
+
+        <script>
+          function clearForm() {
+            const formElements = document.querySelectorAll(
+              ".form-check.dag input"
+            );
+            formElements.forEach((element) => {
+              element.value = "";
+            });
+          }
         </script>
       </form>
     </div>
@@ -412,6 +503,13 @@
     .addEventListener("click", function (event) {
       event.preventDefault(); // Prevent the default action
 
+
+      const form = document.getElementById("connection_form");
+
+      if (!form.checkValidity()) {
+        form.reportValidity()
+        return
+      }
       // Get selected values
       const projectName = document.querySelector(
         '[name="ct_project_id"]'
@@ -425,13 +523,14 @@
         '[name="conn_type2"]'
       ).value;
 
-
       // Construct the URL with query parameters
       const url =
         "{{ url_for('ProjectsView.projects_to_load') }}" +
         `?project_name=${encodeURIComponent(
           projectName
-        )}&connection=${encodeURIComponent(connection)}&biview_database=${encodeURIComponent(biview_database)}`;
+        )}&connection=${encodeURIComponent(
+          connection
+        )}&biview_database=${encodeURIComponent(biview_database)}`;
 
       // Redirect to the constructed URL
       window.location.href = url;

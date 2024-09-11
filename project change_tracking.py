@@ -6,7 +6,7 @@ from airflow.plugins_manager import AirflowPlugin
 from flask import Blueprint, request, jsonify, url_for, redirect, flash
 from flask_appbuilder import expose, BaseView as AppBuilderBaseView
 
-from wtforms import Form, SelectField, RadioField, StringField, BooleanField, DateTimeLocalField
+from wtforms import Form, SelectField, RadioField, StringField, BooleanField, DateTimeLocalField, TimeField, DateField
 from airflow.www.app import csrf
 from wtforms.validators import InputRequired
 from croniter import croniter, CroniterBadCronError, CroniterBadDateError
@@ -15,13 +15,41 @@ from airflow import settings
 from airflow.models import Connection
 from airflow.providers.microsoft.mssql.hooks.mssql import MsSqlHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook as PH
+from airflow.providers.exasol.hooks.exasol import ExasolHook as EH
+
 
 #  Инициализация фронт-части плагина
 bp = Blueprint(
     "project_data_saving",
     __name__,
     template_folder="templates",
+    static_folder="static", 
+    static_url_path="/static/project_data_saving"
 )
+
+class GetConnection:
+    """Класс для получения наборов connections"""
+
+    @staticmethod
+    def get_all_connections():
+        """Получаем все Connections из Apache Airflow"""
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connections_list = [i.conn_id for i in connections]
+        return connections_list
+
+    @staticmethod
+    def get_database_connection(name_database: str) -> list:
+        """
+        Получаем определенный Connection из Apache Airflow
+        params:: ['exasol', 'postgres', 'mssql']
+        """
+
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connections_list = [i.conn_id for i in connections if name_database in i.conn_type]
+        return connections_list
+
 
 
 def get_connection_postgres():
@@ -34,16 +62,16 @@ def get_all_database_mssql():
     """Получение connections из базы данных mssql"""
     mssql_hook = MsSqlHook(mssql_conn_id='mssql_af_net')
     sql = "SELECT name, database_id FROM sys.databases;"
-    databases = [" "] + [i[0] for i in mssql_hook.get_records(sql)]
+    databases = [i[0] for i in mssql_hook.get_records(sql)]
     return databases
 
 
-def get_all_connections():
-    """Получаем все Connections из Apache Airflow"""
-    session = settings.Session()
-    connections = session.query(Connection).all()
-    connections_list = [" "] + [i.conn_id for i in connections]
-    return connections_list
+def get_all_schemas_exasol():
+    """Получение connections из базы данных exasol"""
+    exasol_hook = EH(exasol_conn_id='exa_af_net')
+    sql = "SELECT SCHEMA_NAME FROM EXA_ALL_SCHEMAS;"
+    databases = [i[0] for i in exasol_hook.get_records(sql)]
+    return databases
 
 
 def validate_cron(form, field) -> bool:
@@ -56,12 +84,11 @@ def validate_cron(form, field) -> bool:
         return False
 
 
-def validate_date(raw_date: str) -> str:
-    if raw_date is None:
+def replace_response_datetime(raw_datetime: str) -> str:
+    if raw_datetime is None:
         return 'NULL'
     else:
-        return raw_date
-
+        return f"'{raw_datetime}'"
 
 class ProjectForm(Form):
     """Form administration of ct project"""
@@ -78,7 +105,8 @@ class ProjectForm(Form):
 
     source_connection_id = SelectField(
         'Source Connection ID',
-        choices=get_all_connections(),
+        validators=[InputRequired()],
+        choices=GetConnection.get_all_connections(),
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -87,6 +115,7 @@ class ProjectForm(Form):
 
     one_c_database = SelectField(
         '1C Database',
+        validators=[InputRequired()],
         choices=get_all_database_mssql(),
         id="conn_type1",
         name="conn_type1",
@@ -97,6 +126,7 @@ class ProjectForm(Form):
 
     biview_database = SelectField(
         'BIView Database',
+        validators=[InputRequired()],
         choices=get_all_database_mssql(),
         id="conn_type2",
         name="conn_type2",
@@ -119,6 +149,7 @@ class ProjectForm(Form):
 
     ct_database = SelectField(
         'CT Database',
+        validators=[InputRequired()],
         choices=get_all_database_mssql(),
         id="conn_type3",
         name="conn_type3",
@@ -133,16 +164,16 @@ class ProjectForm(Form):
 
     target_connection_id = SelectField(
         'Target Connection ID',
-        choices=get_all_connections(),
+        choices=GetConnection.get_database_connection('exasol'),
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
                    },
     )
 
-    target_database = SelectField(
-        'Target Database',
-        choices=get_all_database_mssql(),
+    target_schema = SelectField(
+        'Target Schema',
+        choices=get_all_database_mssql(),  # Change this to get_all_schemas_exasol for
         id="conn_type4",
         name="conn_type4",
         render_kw={"class": "form-control",
@@ -153,7 +184,7 @@ class ProjectForm(Form):
     target_type = SelectField(
         'Target Type',
         default=' ',
-        choices=[' ', 'ODS', 'HODS'],
+        choices=['ODS', 'HODS'],
         id="conn_type5",
         name="conn_type5",
         render_kw={"class": "form-control",
@@ -161,9 +192,10 @@ class ProjectForm(Form):
                    },
     )
 
-    update_dags_start_date = DateTimeLocalField('Start Date',
-                                                render_kw={"class": "form-control-short"}
-                                                )
+    update_dags_start_date = DateField('Start Date (UTC)',
+                                       render_kw={"class": "form-control-short"}
+                                       )
+    update_dags_start_time = TimeField('Start time')
 
     update_dags_schedule = StringField('Schedule',
                                        validators=[validate_cron],
@@ -173,9 +205,11 @@ class ProjectForm(Form):
                                                   }
                                        )
 
-    transfer_dags_start_date = DateTimeLocalField('Start Date',
-                                                  render_kw={"class": "form-control-short"}
-                                                  )
+    transfer_dags_start_date = DateField('Start Date (UTC)',
+                                         render_kw={"class": "form-control-short"}
+                                         )
+
+    transfer_dags_start_time = TimeField('Start time')
 
     transfer_dags_schedule = StringField('Schedule',
                                          validators=[validate_cron],
@@ -184,7 +218,6 @@ class ProjectForm(Form):
                                                     "placeholder": "* * * * *"
                                                     }
                                          )
-
 
 class ProjectsView(AppBuilderBaseView):
     """View of projects"""
@@ -203,7 +236,7 @@ class ProjectsView(AppBuilderBaseView):
                             ct_database,
                             transfer_source_data,
                             target_connection_id,
-                            target_database,
+                            target_schema,
                             target_type 
                         FROM airflow.atk_ct.ct_projects
                     """
@@ -252,11 +285,13 @@ class ProjectsView(AppBuilderBaseView):
                                     ct_database,
                                     transfer_source_data,
                                     target_connection_id,
-                                    target_database,
+                                    target_schema,
                                     target_type,
                                     update_dags_start_date,
+                                    update_dags_start_time,
                                     update_dags_schedule,
                                     transfer_dags_start_date,
+                                    transfer_dags_start_time,
                                     transfer_dags_schedule
                                     )
                                 VALUES (
@@ -268,11 +303,13 @@ class ProjectsView(AppBuilderBaseView):
                                     '{form.ct_database.data}',
                                     {form.transfer_source_data.data},
                                     '{form.target_connection_id.data}',
-                                    '{form.target_database.data}',
+                                    '{form.target_schema.data}',
                                     '{form.target_type.data}',
-                                    {validate_date(form.update_dags_start_date.data)},
+                                    {replace_response_datetime(form.update_dags_start_date.data)},
+                                    {replace_response_datetime(form.update_dags_start_time.data)},
                                     '{form.update_dags_schedule.data}',
-                                    {validate_date(form.update_dags_start_date.data)},
+                                    {replace_response_datetime(form.transfer_dags_start_date.data)},
+                                    {replace_response_datetime(form.transfer_dags_start_time.data)},
                                     '{form.transfer_dags_schedule.data}'
                                     );"""
             print(sql_insert_query)
@@ -309,9 +346,6 @@ class ProjectsView(AppBuilderBaseView):
                 rows = cursor.fetchall()
                 projects_data = [dict(zip(columns, row)) for row in rows][0]
 
-        # projects_data['start_date'] = projects_data['start_date'].strftime('%d.%m.%Y')
-        print(projects_data)
-
         form_existing = ProjectForm(data=projects_data)
 
         form_update = ProjectForm(request.form)
@@ -327,11 +361,17 @@ class ProjectsView(AppBuilderBaseView):
                                     biview_project_type = {form_update.biview_project_type.data},
                                     transfer_source_data = {form_update.transfer_source_data.data},
                                     target_connection_id = '{form_update.target_connection_id.data}',
-                                    target_database = '{form_update.target_database.data}',
+                                    target_schema = '{form_update.target_schema.data}',
                                     target_type = '{form_update.target_type.data}',
-                                    update_dags_start_date = {validate_date(form_update.update_dags_start_date.data)},
+                                    update_dags_start_date = {replace_response_datetime(
+                                                                form_update.update_dags_start_date.data)},
+                                    update_dags_start_time = {replace_response_datetime(
+                                                                form_update.update_dags_start_time.data)},
                                     update_dags_schedule = '{form_update.update_dags_schedule.data}',
-                                    transfer_dags_start_date = {validate_date(form_update.transfer_dags_start_date.data)},
+                                    transfer_dags_start_date = {replace_response_datetime(
+                                                                form_update.transfer_dags_start_date.data)},
+                                    transfer_dags_start_time = {replace_response_datetime(
+                                                                form_update.transfer_dags_start_time.data)},
                                     transfer_dags_schedule = '{form_update.transfer_dags_schedule.data}'
                                 WHERE ct_project_id = '{form_update.ct_project_id.data}'
                                 ;"""
@@ -349,6 +389,8 @@ class ProjectsView(AppBuilderBaseView):
             except Exception as e:
                 if 'duplicate key' in str(e):
                     flash("Данное имя проекта уже существует! Выберите другое.", category='warning')
+                elif 'None' in str(e):
+                    flash("Введите дату и время!", category='warning')
                 else:
                     flash(str(e), category='warning')
                 return self.render_template("edit_project.html", form=form_update)
@@ -391,3 +433,5 @@ class AirflowConnectionPlugin(AirflowPlugin):
     name = "project_list"
     flask_blueprints = [bp]
     appbuilder_views = [v_appbuilder_package]
+
+
