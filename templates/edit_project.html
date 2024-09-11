@@ -545,27 +545,36 @@
     .addEventListener("click", function (event) {
       event.preventDefault(); // Prevent the default action
 
+      const form = document.getElementById("connection_form");
+
+      if (!form.checkValidity()) {
+        form.reportValidity()
+        return
+      }
+
       // Get selected values
       const projectName = document.querySelector(
         '[name="ct_project_id"]'
       ).value;
 
-      console.log("ct_project_id", projectName);
-
       const connection = document.querySelector(
         '[name="source_connection_id"]'
       ).value;
 
-      console.log("source_connection_id", connection);
+      const biview_database = document.querySelector(
+        '[name="conn_type2"]'
+      ).value;
 
       // Construct the URL with query parameters
       const url =
         "{{ url_for('ProjectsView.projects_to_load') }}" +
         `?project_name=${encodeURIComponent(
           projectName
-        )}&connection=${encodeURIComponent(connection)}`;
+        )}&connection=${encodeURIComponent(
+          connection
+        )}&biview_database=${encodeURIComponent(biview_database)}`;
 
-      // Redirect to the constructed URL
+
       window.location.href = url;
     });
 

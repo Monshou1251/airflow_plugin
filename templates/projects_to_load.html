@@ -1,9 +1,20 @@
 {% extends base_template %} {% block head_css %} {{ super() }}
-<link rel="stylesheet" type="text/css" href="{{ url_for('mssql_plugin.static', filename='css/ag-grid.css') }}">
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('mssql_plugin.static', filename='css/ag-grid.css') }}"
+/>
 
-<link rel="stylesheet" type="text/css" href="{{ url_for('mssql_plugin.static', filename='css/ag-theme-alpine.css') }}">
+<link
+  rel="stylesheet"
+  type="text/css"
+  href="{{ url_for('mssql_plugin.static', filename='css/ag-theme-alpine.css') }}"
+/>
 
-<script type="text/javascript" src="{{ url_for('mssql_plugin.static', filename='js/ag-grid-community.min.noStyle.js') }}"></script>
+<script
+  type="text/javascript"
+  src="{{ url_for('mssql_plugin.static', filename='js/ag-grid-community.min.noStyle.js') }}"
+></script>
 
 <style>
   /* Override AG Grid border color */
@@ -46,17 +57,60 @@
     text-align: right;
     gap: 10px;
   }
+
+  /* Styles for notification */
+  .notification {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 300px;
+    padding: 15px;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 16px;
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    visibility: hidden;
+  }
+
+  .notification.show {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+  }
+
+  .notification.hide {
+    opacity: 0;
+    transform: translateY(-20px);
+    visibility: hidden;
+  }
+
+  .notification.success {
+    background-color: #27ae60;
+  }
+
+  .notification.error {
+    background-color: #e74c3c;
+  }
+
+  .notification.info {
+    background-color: #c9c9c9;
+  }
 </style>
 {% endblock %} {% block content %}
 <div class="container-form">
+  <div id="notification" class="notification"></div>
+
   <div class="panel panel-primary">
     <div class="panel-heading">
-      <h4>Проекты</h4>
+      <h4></h4>
     </div>
     <div class="mssql-plugin-container">
       <div class="mssql-plugin-form-group">
-        <p><strong>Selected Project:</strong> {{ project_name }}</p>
-        <p><strong>Selected Connection:</strong> {{ connection }}</p>
+        <p><strong>Project:</strong> {{ project_name }}</p>
+        <p><strong>Connection:</strong> {{ connection }}</p>
+        <p><strong>biview_database:</strong> {{ biview_database }}</p>
       </div>
       <div class="ag-grid-container">
         <div
@@ -80,7 +134,7 @@
             >Update tables list</a
           >
           <a
-            href="javascript:history.back()"
+            href="javascript:history.go(-2)"
             class="btn btn-sm btn-default btn-no-margin"
             data-toggle="tooltip"
             rel="tooltip"
@@ -99,12 +153,22 @@
 <script>
   const connection = "{{ connection }}";
   const project_id = "{{ project_name }}";
+  const biview_database = "{{ biview_database }}";
   console.log("connection: ", connection);
   console.log("project_id: ", project_id);
+  console.log("biview_database: ", biview_database);
   const dataToSend = [];
   let gridOptions = null;
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
+  // const capitalized_project_name = "{{ project_name }}";
+  document.querySelector(".panel-heading h4").textContent =
+    capitalizeFirstLetter(project_id);
+
+    document.addEventListener("DOMContentLoaded", () => {
     const gridDiv = document.querySelector("#myGrid");
     const errorMessageDiv = createErrorMessageDiv(gridDiv);
 
@@ -160,13 +224,17 @@
           suppressHeaderMenuButton: true, // Disable filtering menu
           resizable: false,
         },
-        ...data.columns.map((col) => ({
-          headerName: col.toUpperCase(),
-          field: col,
-          flex: 1,
-          editable: col === "load",
-          cellRenderer: col === "load" ? "agCheckboxCellRenderer" : undefined,
-        })),
+        ...data.columns
+          .filter((col) => col !== "project_id")
+          .map((col) => ({
+            headerName:
+              col.charAt(0).toUpperCase() + col.slice(1).toLowerCase(),
+            field: col,
+            flex: 1,
+            headerCheckboxSelection: col === "load" ? true : false,
+            editable: col === "load",
+            cellRenderer: col === "load" ? "agCheckboxCellRenderer" : undefined,
+          })),
       ];
 
       const rowData = data.results;
@@ -187,6 +255,7 @@
           resizable: true,
         },
         onCellValueChanged: handleCellValueChanged,
+        onSelectionChanged: handleSelectionChanged,
         rowSelection: "multiple",
       };
 
@@ -209,6 +278,20 @@
       } else {
         createNewEntry(data.table_name, field, oldValue, newValue);
       }
+    }
+
+    function handleSelectionChanged(event) {
+      const column = event.columnApi.getAllColumns().find(col => col.colId === 'load');
+      if (!column) return;
+
+      const allNodes = event.api.getDisplayedRowCount();
+      const isHeaderChecked = event.api.getHeaderCheckboxSelection(column);
+
+      event.api.forEachNode(node => {
+        if (node.data) {
+          node.setDataValue(column.colId, isHeaderChecked);
+        }
+      });
     }
 
     function updateExistingEntry(index, field, oldValue, newValue) {
@@ -242,8 +325,9 @@
         const response = await fetch(
           `/mybaseview/update_and_fetch_data?connection=${encodeURIComponent(
             connection
-          )}&project_id=${encodeURIComponent(project_id)}`
+          )}&project_id=${encodeURIComponent(project_id)}&biview_database=${encodeURIComponent(biview_database)}`
         );
+
         const data = await response.json();
 
         if (data.status === "error") {
@@ -283,15 +367,31 @@
         });
 
         const result = await response.json();
+        const notification = document.getElementById("notification");
+
         if (result.status === "success") {
-          alert("Data updated successfully!");
+          showNotification("Data updated successfully!", "success");
           dataToSend.length = 0; // Clear the dataToSend array after saving
         } else {
-          alert("Failed to update data: " + result.message);
+          showNotification(
+            "No changes were detected. There is nothing to save.",
+            "info"
+          );
         }
       } catch (error) {
-        handleError(error, "Error updating data:");
+        showNotification("Error updating data: " + error.message, "error");
       }
+    }
+
+    function showNotification(message, type) {
+      const notification = document.getElementById("notification");
+      notification.textContent = message;
+      notification.className = `notification ${type} show`;
+
+      // Hide the notification after 5 seconds
+      setTimeout(() => {
+        notification.classList.remove("show");
+      }, 5000); // Duration in milliseconds
     }
 
     function displayError(message) {
@@ -301,6 +401,17 @@
     function handleError(error, prefix = "Error:") {
       console.error(prefix, error);
       errorMessageDiv.textContent = `${prefix} ${error.message}`;
+    }
+  });
+
+
+  window.addEventListener("beforeunload", function (event) {
+    if (dataToSend.length > 0) {
+      // Prevent default behavior (prompt user with confirmation dialog)
+      event.preventDefault();
+      // Show a custom message in some browsers
+      event.returnValue =
+        "You have unsaved changes, do you really want to leave?";
     }
   });
 </script>

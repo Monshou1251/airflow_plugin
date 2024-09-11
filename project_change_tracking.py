@@ -198,7 +198,7 @@ class ProjectForm(Form):
 
     target_schema = SelectField(
         'Target Schema',
-        choices=get_all_schemas_exasol(),
+        choices=get_all_database_mssql(),
         id="conn_type4",
         name="conn_type4",
         render_kw={"class": "form-control",
@@ -307,6 +307,7 @@ class ProjectsView(AppBuilderBaseView):
             sql_insert_query = f"""
                                 INSERT INTO airflow.atk_ct.ct_projects (
                                     ct_project_id,
+                                    source_database_type,
                                     source_connection_id,
                                     one_c_database,
                                     biview_database,
@@ -325,6 +326,7 @@ class ProjectsView(AppBuilderBaseView):
                                     )
                                 VALUES (
                                     '{form.ct_project_id.data}',
+                                    '{form.source_database_type.data}',
                                     '{form.source_connection_id.data}',
                                     '{form.one_c_database.data}',
                                     '{form.biview_database.data}',
@@ -349,13 +351,13 @@ class ProjectsView(AppBuilderBaseView):
                     conn.commit()
 
                 flash("Проект успешно сохранен", category="info")
-                return self.render_template("add_projects.html", form=form)
+                # return self.render_template("add_projects.html", form=form)
             except Exception as e:
                 if 'duplicate key' in str(e):
                     flash("Данное имя проекта уже существует! Выберите другое.", category='warning')
                 else:
                     flash(str(e), category='warning')
-                return self.render_template("add_projects.html", form=form)
+                # return self.render_template("add_projects.html", form=form)
 
         return self.render_template("add_projects.html", form=form)
 
@@ -384,6 +386,7 @@ class ProjectsView(AppBuilderBaseView):
             sql_update_query = f"""
                                 UPDATE airflow.atk_ct.ct_projects
                                 SET ct_project_id = '{form_update.ct_project_id.data}',
+                                    source_database_type = '{form_update.source_database_type.data}',
                                     source_connection_id = '{form_update.source_connection_id.data}',
                                     one_c_database = '{form_update.one_c_database.data}',
                                     biview_database = '{form_update.biview_database.data}',
@@ -413,7 +416,7 @@ class ProjectsView(AppBuilderBaseView):
                     conn.commit()
 
                 flash("Проект успешно изменен", category="info")
-                return self.render_template("edit_project.html", form=form_update)
+                # return self.render_template("edit_project.html", form=form_update)
 
             except Exception as e:
                 if 'duplicate key' in str(e):
@@ -422,7 +425,7 @@ class ProjectsView(AppBuilderBaseView):
                     flash("Введите дату и время!", category='warning')
                 else:
                     flash(str(e), category='warning')
-                return self.render_template("edit_project.html", form=form_update)
+                # return self.render_template("edit_project.html", form=form_update)
 
         return self.render_template("edit_project.html", form=form_existing)
 
