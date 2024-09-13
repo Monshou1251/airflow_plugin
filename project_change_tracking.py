@@ -29,7 +29,7 @@ class GetConnection:
     """Класс для получения наборов connections"""
 
     @staticmethod
-    def get_all_connections():
+    def get_all_connections() -> list:
         """Получаем все Connections из Apache Airflow"""
         session = settings.Session()
         connections = session.query(Connection).all()
@@ -58,26 +58,38 @@ class GetConnection:
         return connections_list
 
 
+class GetDatabase:
+    """Получение всех баз данных по connection"""
+
+    @staticmethod
+    def get_all_database_mssql(connection: str) -> list[str]:
+        """Получение connections из базы данных mssql"""
+        mssql_hook = MsSqlHook(mssql_conn_id=connection)
+        sql = "SELECT name, database_id FROM sys.databases;"
+        databases = [i[0] for i in mssql_hook.get_records(sql)]
+        return databases
+
+    @staticmethod
+    def get_all_database_postgres(connection: str) -> list[str]:
+        """Получение connections из базы данных postgres"""
+        pg_hook = PH.get_hook(connection)
+        sql = "SELECT datname FROM pg_database;"
+        databases = [i[0] for i in pg_hook.get_records(sql)]
+        return databases
+
+    @staticmethod
+    def get_all_schemas_exasol(connection: str) -> list[str]:
+        """Получение connections из базы данных exasol"""
+        exasol_hook = EH(exasol_conn_id=connection)
+        sql = "SELECT SCHEMA_NAME FROM EXA_ALL_SCHEMAS;"
+        databases = [i[0] for i in exasol_hook.get_records(sql)]
+        return databases
+
+
 def get_connection_postgres():
     """Получение хука Postgres"""
     pg_hook = PH.get_hook("airflow_postgres")
     return pg_hook
-
-
-def get_all_database_mssql():
-    """Получение connections из базы данных mssql"""
-    mssql_hook = MsSqlHook(mssql_conn_id='mssql_af_net')
-    sql = "SELECT name, database_id FROM sys.databases;"
-    databases = [i[0] for i in mssql_hook.get_records(sql)]
-    return databases
-
-
-def get_all_schemas_exasol():
-    """Получение connections из базы данных exasol"""
-    exasol_hook = EH(exasol_conn_id='exa_af_net')
-    sql = "SELECT SCHEMA_NAME FROM EXA_ALL_SCHEMAS;"
-    databases = [i[0] for i in exasol_hook.get_records(sql)]
-    return databases
 
 
 def validate_cron(form, field) -> bool:
@@ -112,7 +124,7 @@ class ProjectForm(Form):
 
     source_database_type = SelectField(
         "Source Database Type",
-        choices=["MSSQL", "PostgreSQL"],
+        choices=[" ", "MSSQL", "PostgreSQL"],
         id="conn_type6",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -122,7 +134,7 @@ class ProjectForm(Form):
     source_connection_id = SelectField(
         'Source Connection ID',
         validators=[InputRequired()],
-        choices=GetConnection.get_database_connection("MSSQL"),
+        choices=[],
         id="conn_type",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -132,7 +144,7 @@ class ProjectForm(Form):
     one_c_database = SelectField(
         '1C Database',
         validators=[InputRequired()],
-        choices=get_all_database_mssql(),
+        choices=[],
         id="conn_type1",
         name="conn_type1",
         render_kw={"class": "form-control",
@@ -143,7 +155,7 @@ class ProjectForm(Form):
     biview_database = SelectField(
         'BIView Database',
         validators=[InputRequired()],
-        choices=get_all_database_mssql(),
+        choices=[],
         id="conn_type2",
         name="conn_type2",
         render_kw={"class": "form-control",
@@ -166,7 +178,7 @@ class ProjectForm(Form):
     ct_database = SelectField(
         'CT Database',
         validators=[InputRequired()],
-        choices=get_all_database_mssql(),
+        choices=[],
         id="conn_type3",
         name="conn_type3",
         render_kw={"class": "form-control",
@@ -180,7 +192,7 @@ class ProjectForm(Form):
 
     target_database_type = SelectField(
         "Target Database Type",
-        choices=["Exasol", "MYSQL"],
+        choices=[" ", "Exasol", "MYSQL"],
         id="conn_type7",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -198,7 +210,6 @@ class ProjectForm(Form):
 
     target_schema = SelectField(
         'Target Schema',
-        choices=get_all_database_mssql(),
         id="conn_type4",
         name="conn_type4",
         render_kw={"class": "form-control",
@@ -257,7 +268,7 @@ class ProjectsView(AppBuilderBaseView):
                         SELECT
                             ct_project_id,
                             source_connection_id,
-                            one_c_database,
+                            "1_c_database",
                             biview_database,
                             biview_project_type,
                             ct_database,
@@ -268,7 +279,7 @@ class ProjectsView(AppBuilderBaseView):
                         FROM airflow.atk_ct.ct_projects
                     """
         columns = [field.label.text for field in ProjectForm()]
-        print(columns)
+
         with get_connection_postgres().get_conn() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(sql_query)
@@ -309,11 +320,12 @@ class ProjectsView(AppBuilderBaseView):
                                     ct_project_id,
                                     source_database_type,
                                     source_connection_id,
-                                    one_c_database,
+                                    "1_c_database",
                                     biview_database,
                                     biview_project_type,
                                     ct_database,
                                     transfer_source_data,
+                                    target_database_type,
                                     target_connection_id,
                                     target_schema,
                                     target_type,
@@ -333,6 +345,7 @@ class ProjectsView(AppBuilderBaseView):
                                     {form.biview_project_type.data},
                                     '{form.ct_database.data}',
                                     {form.transfer_source_data.data},
+                                    '{form.target_database_type.data}',
                                     '{form.target_connection_id.data}',
                                     '{form.target_schema.data}',
                                     '{form.target_type.data}',
@@ -345,6 +358,10 @@ class ProjectsView(AppBuilderBaseView):
                                     );"""
             print(sql_insert_query)
             try:
+
+                if form.source_database_type == " " or form.target_database_type == " ":
+                    raise ValueError("Некорректное значение для типа базы данных!")
+
                 with get_connection_postgres().get_conn() as conn:
                     with conn.cursor() as cursor:
                         cursor.execute(sql_insert_query)
@@ -366,8 +383,6 @@ class ProjectsView(AppBuilderBaseView):
     def edit_project_data(self, ct_project_id):
         """Edit of project data"""
 
-        print("Im in edit_project_data")
-
         sql_select_query = f"""SELECT * FROM airflow.atk_ct.ct_projects WHERE ct_project_id = '{ct_project_id}';"""
 
         with get_connection_postgres().get_conn() as conn:
@@ -377,7 +392,7 @@ class ProjectsView(AppBuilderBaseView):
                 rows = cursor.fetchall()
                 projects_data = [dict(zip(columns, row)) for row in rows][0]
 
-        form_existing = ProjectForm(data=projects_data)
+        form = ProjectForm(data=projects_data)
 
         form_update = ProjectForm(request.form)
 
@@ -388,10 +403,11 @@ class ProjectsView(AppBuilderBaseView):
                                 SET ct_project_id = '{form_update.ct_project_id.data}',
                                     source_database_type = '{form_update.source_database_type.data}',
                                     source_connection_id = '{form_update.source_connection_id.data}',
-                                    one_c_database = '{form_update.one_c_database.data}',
+                                    "1_c_database" = '{form_update.one_c_database.data}',
                                     biview_database = '{form_update.biview_database.data}',
                                     biview_project_type = {form_update.biview_project_type.data},
                                     transfer_source_data = {form_update.transfer_source_data.data},
+                                    target_database_type = '{form_update.target_database_type.data}',
                                     target_connection_id = '{form_update.target_connection_id.data}',
                                     target_schema = '{form_update.target_schema.data}',
                                     target_type = '{form_update.target_type.data}',
@@ -410,13 +426,14 @@ class ProjectsView(AppBuilderBaseView):
             print(sql_update_query)
 
             try:
+                if form_update.source_database_type == " " or form_update.target_database_type == " ":
+                    raise ValueError("Некорректное значение для типа базы данных!")
                 with get_connection_postgres().get_conn() as conn:
                     with conn.cursor() as cursor:
                         cursor.execute(sql_update_query)
                     conn.commit()
 
                 flash("Проект успешно изменен", category="info")
-                # return self.render_template("edit_project.html", form=form_update)
 
             except Exception as e:
                 if 'duplicate key' in str(e):
@@ -425,9 +442,8 @@ class ProjectsView(AppBuilderBaseView):
                     flash("Введите дату и время!", category='warning')
                 else:
                     flash(str(e), category='warning')
-                # return self.render_template("edit_project.html", form=form_update)
 
-        return self.render_template("edit_project.html", form=form_existing)
+        return self.render_template("edit_project.html", form=form)
 
     @expose('/projects_to_load', methods=['GET'])
     def projects_to_load(self):
@@ -455,10 +471,46 @@ class ProjectsView(AppBuilderBaseView):
 
     @expose('/api/get_connections/', methods=['GET'])
     def get_filtered_connections(self):
-        """Получаем JSON с Базами Данных и их соединениями"""
+        """Функция возвращает список connections соответствующих принимаемому типу базы данных"""
         database_type = request.args.get('database_type')
         connections = GetConnection.get_database_connection(database_type)
         return jsonify(connections)
+
+    @expose("/api/get_database/", methods=['GET'])
+    def get_filtered_database(self):
+        """Функция возвращает список баз данных соответствующих принимаемым connections"""
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connection = [conn for conn in connections if conn.conn_id == request.args.get('connection')][0]
+        databases = []
+        print(connection.conn_type)
+        if connection.conn_type == 'exasol':
+            print(connection.conn_id)
+            databases = GetDatabase.get_all_schemas_exasol(connection.conn_id)
+        elif connection.conn_type == 'mssql':
+            print(connection.conn_id)
+            databases = GetDatabase.get_all_database_mssql(connection.conn_id)
+        elif connection.conn_type == 'postgres':
+            print(connection.conn_id)
+            databases = GetDatabase.get_all_database_postgres(connection.conn_id)
+        return jsonify(databases)
+
+    @expose("/api/get_project_data/", methods=['GET'])
+    def get_project_data(self):
+
+        ct_project_id = request.args.get('ct_project_id')
+        print(ct_project_id)
+        sql_select_query = f"""SELECT * FROM airflow.atk_ct.ct_projects WHERE ct_project_id = '{ct_project_id}';"""
+
+        with get_connection_postgres().get_conn() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_select_query)
+                columns = [col[0] for col in cursor.description]
+                rows = cursor.fetchall()
+                print(rows)
+                projects_data = [dict(zip(columns, row)) for row in rows][0]
+
+        return jsonify(projects_data)
 
 
 v_appbuilder_view = ProjectsView()
