@@ -201,7 +201,7 @@ class ProjectForm(Form):
 
     target_connection_id = SelectField(
         'Target Connection ID',
-        choices=GetConnection.get_database_connection("Exasol"),
+        choices=[],
         id="conn_type8",
         render_kw={"class": "form-control",
                    "data-placeholder": "Select Value",
@@ -476,23 +476,43 @@ class ProjectsView(AppBuilderBaseView):
         connections = GetConnection.get_database_connection(database_type)
         return jsonify(connections)
 
-    @expose("/api/get_database/", methods=['GET'])
-    def get_filtered_database(self):
+    @expose("/api/get_source_database/", methods=['GET'])
+    def get_source_database(self):
         """Функция возвращает список баз данных соответствующих принимаемым connections"""
+
+        databases = []
+        get_connection = request.args.get('connection')
+        print(get_connection)
+
         session = settings.Session()
         connections = session.query(Connection).all()
-        connection = [conn for conn in connections if conn.conn_id == request.args.get('connection')][0]
-        databases = []
-        print(connection.conn_type)
-        if connection.conn_type == 'exasol':
-            print(connection.conn_id)
-            databases = GetDatabase.get_all_schemas_exasol(connection.conn_id)
-        elif connection.conn_type == 'mssql':
-            print(connection.conn_id)
+        connection = [conn for conn in connections if conn.conn_id == get_connection][0]
+
+        if connection.conn_type == 'mssql':
             databases = GetDatabase.get_all_database_mssql(connection.conn_id)
+
         elif connection.conn_type == 'postgres':
-            print(connection.conn_id)
             databases = GetDatabase.get_all_database_postgres(connection.conn_id)
+
+        return jsonify(databases)
+
+    @expose("/api/get_target_database/", methods=['GET'])
+    def get_target_database(self):
+        """Функция возвращает список баз данных соответствующих принимаемым connections"""
+
+        databases = []
+        get_connection = request.args.get('connection')
+
+        session = settings.Session()
+        connections = session.query(Connection).all()
+        connection = [conn for conn in connections if conn.conn_id == get_connection][0]
+
+        if connection.conn_type == 'exasol':
+            databases = GetDatabase.get_all_schemas_exasol(connection.conn_id)
+
+        elif connection.conn_type == 'mysql':
+            databases = GetDatabase.get_all_database_mssql(connection.conn_id)
+
         return jsonify(databases)
 
     @expose("/api/get_project_data/", methods=['GET'])

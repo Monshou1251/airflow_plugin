@@ -285,29 +285,64 @@
 
                 <script>
                         function updateConnections() {
-                          const dbSelect = document.getElementById("conn_type6");
-                          const connectionSelect = document.getElementById("conn_type");
+                    const dbSelect = document.getElementById("conn_type6");
+                    const connectionSelect = document.getElementById("conn_type");
+                  
+                    const selectedDB = dbSelect.value;
+                  
+                    connectionSelect.innerHTML = "";
+                  
+                    fetch(`/projectsview/api/get_connections?database_type=${selectedDB}`)
+                      .then(response => response.json())
+                      .then(connections => {
+                        console.log(connections);
+                        connections.forEach(connection => {
+                          const option = document.createElement("option");
+                          option.value = connection;
+                          option.textContent = connection;
+                          option.classList.add("form-group");
+                          connectionSelect.appendChild(option);
+                        });
+                      })
+                      .catch(error => console.error('Error fetching connections:', error));
+                    }
 
-                          const selectedDB = dbSelect.value;
-
-                          connectionSelect.innerHTML = "";
-
-                          fetch(`/projectsview/api/get_connections?database_type=${selectedDB}`)
-                            .then(response => response.json())
-                            .then(connections => {
-                              console.log(connections);
-                              connections.forEach(connection => {
-                                const option = document.createElement("option");
-                                option.value = connection;
-                                option.textContent = connection;
-                                option.class = "form-group";
-                                connectionSelect.appendChild(option);
-                              });
-                            })
-                            .catch(error => console.error('Error fetching connections:', error));
-                        }
-
-                        document.getElementById("conn_type6").addEventListener("change", updateConnections);
+                    function updateTargetConnections() {
+                    const selectTargetDatabaseType = document.getElementById("conn_type7");
+                    const selectConnectionType = document.getElementById("conn_type8");
+                  
+                    const selectedTargetDB = selectTargetDatabaseType.value;
+                  
+                    selectConnectionType.innerHTML = "";
+                  
+                    fetch(`/projectsview/api/get_connections?database_type=${selectedTargetDB}`)
+                      .then(response => response.json())
+                      .then(connections => {
+                        console.log(connections);
+                        connections.forEach(connection => {
+                          const option = document.createElement("option");
+                          option.value = connection;
+                          option.textContent = connection;
+                          option.classList.add("form-group");
+                          selectConnectionType.appendChild(option);
+                        });
+                      })
+                      .catch(error => console.error('Error fetching connections:', error));
+                    }
+                    
+                    function waitForForm() {
+                    const conn_id = document.getElementById('conn_id');
+                    if (conn_id) {
+                      document.getElementById("conn_type6").addEventListener("change", updateConnections);
+                      document.getElementById("conn_type7").addEventListener("change", updateTargetConnections);
+                    } else {
+                      setTimeout(waitForForm, 100);
+                    }
+                    }
+                
+                  document.addEventListener('DOMContentLoaded', function() {
+                    waitForForm();
+                  });
 
                 </script>
 
@@ -348,56 +383,6 @@
                     <div class="col-sm-10">{{ form.ct_database }}</div>
                 </div>
 
-                <script>
-                    let previousConnValue = null;
-
-                    function updateConnections() {
-                      const connSelect = document.getElementById("conn_type");
-                      const connectionSelectBIView = document.getElementById("conn_type2");
-                      const connectionSelectCT = document.getElementById("conn_type3");
-                      const connectionSelect1C = document.getElementById("conn_type1");
-
-                      const selectedConn = connSelect.value;
-
-                      if (selectedConn !== previousConnValue) {
-                        previousConnValue = selectedConn;
-
-                        connectionSelectBIView.innerHTML = "";
-                        connectionSelectCT.innerHTML = "";
-                        connectionSelect1C.innerHTML = "";
-
-                      fetch(`/projectsview/api/get_database?connection=${selectedConn}`)
-                          .then(response => response.json())
-                          .then(connections => {
-                            console.log(connections);
-                            connections.forEach(connection => {
-
-                              const option1 = document.createElement("option");
-                              option1.value = connection;
-                              option1.textContent = connection;
-                              option1.classList.add("form-control");
-                              connectionSelectBIView.appendChild(option1);
-
-                              const option2 = document.createElement("option");
-                              option2.value = connection;
-                              option2.textContent = connection;
-                              option2.classList.add("form-control");
-                              connectionSelectCT.appendChild(option2);
-
-                              const option3 = document.createElement("option");
-                              option3.value = connection;
-                              option3.textContent = connection;
-                              option3.classList.add("form-control");
-                              connectionSelect1C.appendChild(option3);
-                            });
-                          })
-                          .catch(error => console.error('Error fetching connections:', error));
-                      }
-                    }
-
-                    setInterval(updateConnections, 100);
-                </script>
-
                 <div class="form-group row">
                     <label class="col-sm-2 col-form-label"
                     >{{ form.transfer_source_data.label }}</label>
@@ -417,64 +402,88 @@
                     </div>
 
                     <script>
-                        function updateConnections() {
-                          const dbSelect = document.getElementById("conn_type7");
-                          const connectionSelect = document.getElementById("conn_type8");
-
-                          const selectedDB = dbSelect.value;
-
-                          connectionSelect.innerHTML = "";
-
-                          fetch(`/projectsview/api/get_connections?database_type=${selectedDB}`)
+                      let previousConnValue = null;
+                      function updateDatabases() {
+                        const connSelect = document.getElementById("conn_type");
+                        const connectionSelectBIView = document.getElementById("conn_type2");
+                        const connectionSelectCT = document.getElementById("conn_type3");
+                        const connectionSelect1C = document.getElementById("conn_type1");
+                      
+                        const selectedtargetConn = connSelect.value;
+                      
+                        if (selectedtargetConn !== previousConnValue) {
+                          previousConnValue = selectedtargetConn;
+                        
+                          connectionSelectBIView.innerHTML = "";
+                          connectionSelectCT.innerHTML = "";
+                          connectionSelect1C.innerHTML = "";
+                        
+                          fetch(`/projectsview/api/get_source_database?connection=${selectedtargetConn}`)
                             .then(response => response.json())
                             .then(connections => {
                               console.log(connections);
                               connections.forEach(connection => {
-                                const option = document.createElement("option");
-                                option.value = connection;
-                                option.textContent = connection;
-                                option.class = "form-group";
-                                connectionSelect.appendChild(option);
+                                const option1 = document.createElement("option");
+                                option1.value = connection;
+                                option1.textContent = connection;
+                                option1.classList.add("form-control");
+                                connectionSelectBIView.appendChild(option1);
+                              
+                                const option2 = document.createElement("option");
+                                option2.value = connection;
+                                option2.textContent = connection;
+                                option2.classList.add("form-control");
+                                connectionSelectCT.appendChild(option2);
+                              
+                                const option3 = document.createElement("option");
+                                option3.value = connection;
+                                option3.textContent = connection;
+                                option3.classList.add("form-control");
+                                connectionSelect1C.appendChild(option3);
                               });
                             })
                             .catch(error => console.error('Error fetching connections:', error));
                         }
+                      }
+                    
+                      let previousTargetConnValue = null;
+                      function updateTargetDatabases() {
+                        const connTargetSelect = document.getElementById("conn_type8");
+                        const dbTargetSelect = document.getElementById("conn_type4");
+                      
+                        const selectedConn = connTargetSelect.value;
+                      
+                        if (selectedConn !== previousTargetConnValue) {
+                          previousTargetConnValue = selectedConn;
+                        
+                          dbTargetSelect.innerHTML = "";
+                        
+                          fetch(`/projectsview/api/get_target_database?connection=${selectedConn}`)
+                            .then(response => response.json())
+                            .then(connections => {
+                              console.log(connections);
+                              connections.forEach(connection => {
+                                const option1 = document.createElement("option");
+                                option1.value = connection;
+                                option1.textContent = connection;
+                                option1.classList.add("form-control");
+                                dbTargetSelect.appendChild(option1);
+                              });
+                            })
+                            .catch(error => console.error('Error fetching connections:', error));
+                        }
+                      }
+                      
+                      setInterval(updateDatabases, 100);
+                      setInterval(updateTargetDatabases, 100);
 
-                        document.getElementById("conn_type7").addEventListener("change", updateConnections);
+                        
                     </script>
 
                     <div class="form-group row">
                         <label class="col-sm-2 col-form-label">{{ form.target_schema.label }}</label>
                         <div class="col-sm-10">{{ form.target_schema }}</div>
                     </div>
-
-                    <script>
-                        function updateConnections() {
-                          const connSelect = document.getElementById("conn_type8");
-                          const connectionSelectSchema = document.getElementById("conn_type4");
-
-                          const selectedConn = connSelect.value;
-
-                          connectionSelectSchema.innerHTML = "";
-
-                          fetch(`/projectsview/api/get_database?connection=${selectedConn}`)
-                              .then(response => response.json())
-                              .then(connections => {
-                                console.log(connections);
-                                connections.forEach(connection => {
-
-                                  const option1 = document.createElement("option");
-                                  option1.value = connection;
-                                  option1.textContent = connection;
-                                  option1.classList.add("form-control");
-                                  connectionSelectSchema.appendChild(option1);
-                                });
-                              })
-                              .catch(error => console.error('Error fetching connections:', error));
-                          }
-                        }
-                        document.getElementById("conn_type8").addEventListener("change", updateConnections);
-                    </script>
 
                     <div class="form-group row">
                         <label class="col-sm-2 col-form-label">{{ form.target_type.label }}</label>
